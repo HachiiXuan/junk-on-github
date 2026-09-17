@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title id="pageTitle">IP: Detecting...</title>
+    <style>
+        body { 
+            background-color: #0d1117; 
+            color: #c9d1d9; 
+            font-family: 'Consolas', 'Courier New', monospace; 
+            padding: 15px; 
+            line-height: 1.8; 
+            margin: 0 auto;
+            max-width: 900px; 
+            font-size: 14px;
+            overflow-x: hidden;
+        }
+        .header-title {
+            color: #f0f6fc;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        .alert-box {
+            background-color: #2a1f00;
+            border-left: 4px solid #d29922;
+            color: #d29922;
+            padding: 10px 12px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        #output {
+            border-top: 1px dashed #30363d;
+            padding-top: 15px;
+        }
+        .data-row {
+            margin-bottom: 4px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .key { 
+            color: #7ee787; 
+            font-weight: bold; 
+            width: 180px; 
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .val { 
+            color: #d2a8ff; 
+            word-break: break-all; 
+            flex-grow: 1;
+        }
+        .danger { color: #ff7b72; }
+        @media (max-width: 600px) {
+            body { padding: 10px; font-size: 12px; }
+            .key { width: 120px; }
+            .data-row { margin-bottom: 6px; display: block; } 
+            .key { display: block; margin-bottom: 2px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-title" id="ipTitle">IP: Detecting internal node...</div>
+    <div class="alert-box" id="alertText">WARNING: Device underlying fingerprint data captured and uploaded to remote server.</div>
+    <div id="output">Parsing hardware fingerprint...</div>
+
+    <script>
+        // ======= 1. 国际化语言包 (I18N) =======
+        // 默认语言：英文
+        let isChinese = false;
+
+        // 检测URL参数覆盖（方便测试）
+        const urlParams = new URLSearchParams(window.location.search);
+        const langOverride = urlParams.get('lang');
+
+        if (langOverride === 'zh') {
+            isChinese = true;
+        } else if (langOverride === 'en') {
+            isChinese = false;
+        } else {
+            // 自动检测浏览器语言：如果是中文，才切换为中文
+            if (navigator.language && navigator.language.toLowerCase().includes('zh')) {
+                isChinese = true;
+            }
+        }
+
+        const i18n = {
+            zh: {
+                title: "IP: 正在探测...",
+                alert: "警告：此设备的底层特征信息已被捕获并上传至远程服务器。",
+                loading: "正在解析底层硬件指纹...",
+                ipTitle: "IP: 正在探测内网节点...",
+                ipDetected: "IP: {ip} (内网节点已劫持)",
+                ipFallback: "192.168.1.104",
+                sysInfo: "系统实时时间",
+                duration: "页面停留时长",
+                cursor: "光标实时坐标",
+                ua: "User-Agent (系统与浏览)",
+                os: "操作系统平台",
+                lang: "浏览器语言",
+                tz: "系统时区",
+                screen: "屏幕分辨率",
+                color: "色彩深度 / 像素比",
+                cpu: "CPU核心数 / 内存",
+                touch: "触摸支持点数",
+                battery: "电池电量 / 状态",
+                batteryFormat: "电量 {level}% | 充电中: {charging}",
+                yes: "是", no: "否",
+                media: "媒体硬件数量",
+                mediaFormat: "摄像头: {cam}个 | 麦克风: {mic}个",
+                canvas: "Canvas 渲染指纹",
+                gpuVendor: "GPU 厂商 (WebGL)",
+                gpuModel: "GPU 型号 (WebGL)",
+                audio: "Audio 音频指纹",
+                fonts: "检测到的本地字体",
+                unknownFont: "标准系统字体",
+                unknown: "未知"
+            },
+            en: {
+                title: "IP: Detecting...",
+                alert: "WARNING: Device underlying fingerprint data captured and uploaded to remote server.",
+                loading: "Parsing hardware fingerprint...",
+                ipTitle: "IP: Detecting internal node...",
+                ipDetected: "IP: {ip} (Internal node hijacked)",
+                ipFallback: "192.168.1.104",
+                sysInfo: "System Time",
+                duration: "Page Dwell Time",
+                cursor: "Cursor Coordinates",
+                ua: "User-Agent",
+                os: "OS Platform",
+                lang: "Browser Language",
+                tz: "System Timezone",
+                screen: "Screen Resolution",
+                color: "Color Depth / DPR",
+                cpu: "CPU Cores / RAM",
+                touch: "Touch Points",
+                battery: "Battery Status",
+                batteryFormat: "Level {level}% | Charging: {charging}",
+                yes: "Yes", no: "No",
+                media: "Media Hardware Count",
+                mediaFormat: "Camera: {cam} | Mic: {mic}",
+                canvas: "Canvas Fingerprint",
+                gpuVendor: "GPU Vendor (WebGL)",
+                gpuModel: "GPU Model (WebGL)",
+                audio: "Audio Fingerprint",
+                fonts: "Detected Local Fonts",
+                unknownFont: "Standard System Fonts",
+                unknown: "Unknown"
+            }
+        };
+
+        const t = isChinese ? i18n.zh : i18n.en;
+
+        // 设置静态文本
+        document.title = t.title;
+        document.getElementById('ipTitle').innerText = t.ipTitle;
+        document.getElementById('alertText').innerText = t.alert;
+        document.getElementById('output').innerHTML = t.loading;
+
+        // ======= 2. 纯本地内网IP探测模块 =======
+        let ipDetected = false;
+        const startTime = Date.now(); 
+
+        function updateIPTitle(ip) {
+            if (ipDetected) return;
+            ipDetected = true;
+            document.title = `IP: ${ip} (已捕获)`;
+            document.getElementById('ipTitle').innerHTML = t.ipDetected.replace('{ip}', ip);
+        }
+
+        try {
+            const rtc = new RTCPeerConnection({iceServers:[]});
+            rtc.createDataChannel('');
+            rtc.createOffer().then(offer => rtc.setLocalDescription(offer));
+            rtc.onicecandidate = (ice) => {
+                if (!ice || !ice.candidate) return;
+                const ipMatch = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(ice.candidate.candidate);
+                if (ipMatch) {
+                    updateIPTitle(ipMatch[1]);
+                    rtc.onicecandidate = null;
+                }
+            };
+        } catch (e) {}
+
+        setTimeout(() => {
+            if (!ipDetected) updateIPTitle(t.ipFallback);
+        }, 3000);
+
+        // ======= 3. 基础信息输出 =======
+        const output = document.getElementById('output');
+        output.innerHTML = ''; 
+
+        // 为了避免中英文ID变动导致找不到元素，增加一个固定的ID参数
+        function printInfo(key, val, isDanger = false, fixedId = '') {
+            const div = document.createElement('div');
+            div.className = 'data-row';
+            const valClass = isDanger ? 'val danger' : 'val';
+            const idAttr = fixedId ? `id="${fixedId}"` : '';
+            div.innerHTML = `<span class="key">${key}:</span><span class="${valClass}" ${idAttr}>${val}</span>`;
+            output.appendChild(div);
+            return div;
+        }
+
+        printInfo(t.ua, navigator.userAgent);
+        printInfo(t.os, navigator.platform);
+        printInfo(t.lang, navigator.language || navigator.languages[0]);
+        printInfo(t.tz, Intl.DateTimeFormat().resolvedOptions().timeZone);
+        printInfo(t.screen, `${screen.width}x${screen.height} (可用: ${screen.availWidth}x${screen.availHeight})`);
+        printInfo(t.color, `${screen.colorDepth}bit / DPR: ${window.devicePixelRatio}`);
+        printInfo(t.cpu, `${navigator.hardwareConcurrency}核 / ${navigator.deviceMemory || t.unknown}GB`);
+        printInfo(t.touch, navigator.maxTouchPoints);
+        
+        if(navigator.getBattery) {
+            navigator.getBattery().then(b => {
+                const chargingText = b.charging ? t.yes : t.no;
+                const batText = t.batteryFormat.replace('{level}', Math.round(b.level*100)).replace('{charging}', chargingText);
+                printInfo(t.battery, batText);
+            });
+        }
+
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.mediaDevices.enumerateDevices().then(devices => {
+                const cameras = devices.filter(d => d.kind === 'videoinput').length;
+                const mics = devices.filter(d => d.kind === 'audioinput').length;
+                const mediaText = t.mediaFormat.replace('{cam}', cameras).replace('{mic}', mics);
+                printInfo(t.media, mediaText, true);
+            });
+        }
+
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.textBaseline = "top";
+            ctx.font = "14px 'Arial'";
+            ctx.textBaseline = "alphabetic";
+            ctx.fillStyle = "#f60";
+            ctx.fillRect(125, 1, 62, 20);
+            ctx.fillStyle = "#069";
+            ctx.fillText("Terminal Scan", 2, 15);
+            ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+            ctx.fillText("Terminal Scan", 4, 17);
+            const dataUrl = canvas.toDataURL();
+            let hash = 0;
+            for (let i = 0; i < dataUrl.length; i++) {
+                hash = ((hash << 5) - hash) + dataUrl.charCodeAt(i);
+                hash |= 0;
+            }
+            printInfo(t.canvas, "HASH-" + Math.abs(hash), true);
+        } catch (e) {}
+
+        try {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if (debugInfo) {
+                    printInfo(t.gpuVendor, gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
+                    printInfo(t.gpuModel, gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
+                }
+            }
+        } catch (e) {}
+
+        try {
+            const audioCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
+            const oscillator = audioCtx.createOscillator();
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(10000, audioCtx.currentTime);
+            const compressor = audioCtx.createDynamicsCompressor();
+            oscillator.connect(compressor);
+            compressor.connect(audioCtx.destination);
+            oscillator.start(0);
+            audioCtx.startRendering().then(buffer => {
+                const data = buffer.getChannelData(0);
+                let sum = 0;
+                for (let i = 0; i < data.length; i++) {
+                    if (data[i] !== 0) sum += Math.abs(data[i]);
+                }
+                printInfo(t.audio, "HASH-" + Math.round(sum * 1000000000).toString(16), true);
+            });
+        } catch (e) {}
+
+        function detectFonts() {
+            const baseFonts = ['monospace', 'sans-serif', 'serif'];
+            const fontList = ['Arial', 'Microsoft YaHei', 'PingFang SC', 'SimSun', 'Helvetica', 'Times New Roman'];
+            const testString = 'mmmmmmmmmmlli';
+            const testSize = '72px';
+            const span = document.createElement('span');
+            span.style.fontSize = testSize;
+            span.style.position = 'absolute';
+            span.style.left = '-9999px';
+            span.innerHTML = testString;
+            const defaultWidth = {};
+            for (const base of baseFonts) {
+                span.style.fontFamily = base;
+                document.body.appendChild(span);
+                defaultWidth[base] = span.offsetWidth;
+                document.body.removeChild(span);
+            }
+            const detected = [];
+            for (const font of fontList) {
+                for (const base of baseFonts) {
+                    span.style.fontFamily = `'${font}',${base}`;
+                    document.body.appendChild(span);
+                    if (span.offsetWidth !== defaultWidth[base]) {
+                        detected.push(font);
+                        document.body.removeChild(span);
+                        break;
+                    }
+                    document.body.removeChild(span);
+                }
+            }
+            return detected.length > 0 ? detected.join(', ') : t.unknownFont;
+        }
+        printInfo(t.fonts, detectFonts());
+
+        // ======= 4. 实时数据输出模块 =======
+        // 注意这里传入了固定ID，防止中英文切换后找不到元素
+        printInfo(t.sysInfo, "Loading...", true, "val_sys_time");
+        printInfo(t.duration, "00:00:00", true, "val_duration");
+        printInfo(t.cursor, "X: 0, Y: 0", true, "val_cursor");
+
+        const timeEl = document.getElementById('val_sys_time');
+        const durationEl = document.getElementById('val_duration');
+        const cursorEl = document.getElementById('val_cursor');
+
+        setInterval(() => {
+            const now = new Date();
+            const timeStr = now.getFullYear() + '-' + 
+                           String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(now.getDate()).padStart(2, '0') + ' ' + 
+                           String(now.getHours()).padStart(2, '0') + ':' + 
+                           String(now.getMinutes()).padStart(2, '0') + ':' + 
+                           String(now.getSeconds()).padStart(2, '0');
+            
+            const diff = Math.floor((Date.now() - startTime) / 1000);
+            const h = String(Math.floor(diff / 3600)).padStart(2, '0');
+            const m = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+            const s = String(diff % 60).padStart(2, '0');
+
+            if (timeEl) timeEl.innerText = timeStr;
+            if (durationEl) durationEl.innerText = `${h}:${m}:${s}`;
+        }, 1000);
+
+        function updateCursor(x, y) {
+            if (cursorEl) cursorEl.innerText = `X: ${Math.round(x)}, Y: ${Math.round(y)}`;
+        }
+        window.addEventListener('mousemove', (e) => updateCursor(e.clientX, e.clientY));
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) updateCursor(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+
+        // ======= 5. 原生离开拦截弹窗 =======
+        window.addEventListener('beforeunload', function (e) {
+            if (Date.now() - startTime > 5000) {
+                e.preventDefault();
+                e.returnValue = ''; 
+                return '';
+            }
+        });
+    </script>
+</body>
+</html>
