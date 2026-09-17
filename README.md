@@ -1,4 +1,4 @@
-# random-junk-on-the-github
+# random-junk-on-the-github [EN]
 
 Randomly dropping junk projects.
 
@@ -8,7 +8,7 @@ If you ask me what it's for, it's for nothing. That's it.
 
 ---
 
-# random-junk-on-the-github (中文版)
+# random-junk-on-the-github [ZH]
 
 随机掉落垃圾项目。
 
