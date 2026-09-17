@@ -70,10 +70,7 @@
 
     <script>
         // ======= 1. 国际化语言包 (I18N) =======
-        // 默认语言：英文
         let isChinese = false;
-
-        // 检测URL参数覆盖（方便测试）
         const urlParams = new URLSearchParams(window.location.search);
         const langOverride = urlParams.get('lang');
 
@@ -82,7 +79,6 @@
         } else if (langOverride === 'en') {
             isChinese = false;
         } else {
-            // 自动检测浏览器语言：如果是中文，才切换为中文
             if (navigator.language && navigator.language.toLowerCase().includes('zh')) {
                 isChinese = true;
             }
@@ -118,7 +114,9 @@
                 audio: "Audio 音频指纹",
                 fonts: "检测到的本地字体",
                 unknownFont: "标准系统字体",
-                unknown: "未知"
+                unknown: "未知",
+                available: "可用", // 新增
+                cores: "核"        // 新增
             },
             en: {
                 title: "IP: Detecting...",
@@ -149,19 +147,20 @@
                 audio: "Audio Fingerprint",
                 fonts: "Detected Local Fonts",
                 unknownFont: "Standard System Fonts",
-                unknown: "Unknown"
+                unknown: "Unknown",
+                available: "Available", // 新增
+                cores: "Cores"          // 新增
             }
         };
 
         const t = isChinese ? i18n.zh : i18n.en;
 
-        // 设置静态文本
         document.title = t.title;
         document.getElementById('ipTitle').innerText = t.ipTitle;
         document.getElementById('alertText').innerText = t.alert;
         document.getElementById('output').innerHTML = t.loading;
 
-        // ======= 2. 纯本地内网IP探测模块 =======
+        // ======= 2. 内网IP探测 =======
         let ipDetected = false;
         const startTime = Date.now(); 
 
@@ -194,7 +193,6 @@
         const output = document.getElementById('output');
         output.innerHTML = ''; 
 
-        // 为了避免中英文ID变动导致找不到元素，增加一个固定的ID参数
         function printInfo(key, val, isDanger = false, fixedId = '') {
             const div = document.createElement('div');
             div.className = 'data-row';
@@ -209,9 +207,11 @@
         printInfo(t.os, navigator.platform);
         printInfo(t.lang, navigator.language || navigator.languages[0]);
         printInfo(t.tz, Intl.DateTimeFormat().resolvedOptions().timeZone);
-        printInfo(t.screen, `${screen.width}x${screen.height} (可用: ${screen.availWidth}x${screen.availHeight})`);
+        // 这里使用了 t.available
+        printInfo(t.screen, `${screen.width}x${screen.height} (${t.available}: ${screen.availWidth}x${screen.availHeight})`);
         printInfo(t.color, `${screen.colorDepth}bit / DPR: ${window.devicePixelRatio}`);
-        printInfo(t.cpu, `${navigator.hardwareConcurrency}核 / ${navigator.deviceMemory || t.unknown}GB`);
+        // 这里使用了 t.cores
+        printInfo(t.cpu, `${navigator.hardwareConcurrency} ${t.cores} / ${navigator.deviceMemory || t.unknown}GB`);
         printInfo(t.touch, navigator.maxTouchPoints);
         
         if(navigator.getBattery) {
@@ -318,7 +318,6 @@
         printInfo(t.fonts, detectFonts());
 
         // ======= 4. 实时数据输出模块 =======
-        // 注意这里传入了固定ID，防止中英文切换后找不到元素
         printInfo(t.sysInfo, "Loading...", true, "val_sys_time");
         printInfo(t.duration, "00:00:00", true, "val_duration");
         printInfo(t.cursor, "X: 0, Y: 0", true, "val_cursor");
