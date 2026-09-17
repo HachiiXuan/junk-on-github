@@ -64,8 +64,11 @@
 </head>
 <body>
 
+    <!-- 动态IP标题区 -->
     <div class="header-title" id="ipTitle">IP: Detecting internal node...</div>
+
     <div class="alert-box" id="alertText">WARNING: Device underlying fingerprint data captured and uploaded to remote server.</div>
+    
     <div id="output">Parsing hardware fingerprint...</div>
 
     <script>
@@ -90,7 +93,7 @@
                 alert: "警告：此设备的底层特征信息已被捕获并上传至远程服务器。",
                 loading: "正在解析底层硬件指纹...",
                 ipTitle: "IP: 正在探测内网节点...",
-                ipDetected: "IP: {ip} (内网节点已劫持)",
+                ipDetected: "IP: {ip}",
                 ipFallback: "192.168.1.104",
                 sysInfo: "系统实时时间",
                 duration: "页面停留时长",
@@ -115,15 +118,15 @@
                 fonts: "检测到的本地字体",
                 unknownFont: "标准系统字体",
                 unknown: "未知",
-                available: "可用", // 新增
-                cores: "核"        // 新增
+                available: "可用",
+                cores: "核"
             },
             en: {
                 title: "IP: Detecting...",
                 alert: "WARNING: Device underlying fingerprint data captured and uploaded to remote server.",
                 loading: "Parsing hardware fingerprint...",
                 ipTitle: "IP: Detecting internal node...",
-                ipDetected: "IP: {ip} (Internal node hijacked)",
+                ipDetected: "IP: {ip}", // 修改：去掉括号和文字
                 ipFallback: "192.168.1.104",
                 sysInfo: "System Time",
                 duration: "Page Dwell Time",
@@ -148,13 +151,14 @@
                 fonts: "Detected Local Fonts",
                 unknownFont: "Standard System Fonts",
                 unknown: "Unknown",
-                available: "Available", // 新增
-                cores: "Cores"          // 新增
+                available: "Available",
+                cores: "Cores"
             }
         };
 
         const t = isChinese ? i18n.zh : i18n.en;
 
+        // 设置初始静态文本
         document.title = t.title;
         document.getElementById('ipTitle').innerText = t.ipTitle;
         document.getElementById('alertText').innerText = t.alert;
@@ -167,7 +171,7 @@
         function updateIPTitle(ip) {
             if (ipDetected) return;
             ipDetected = true;
-            document.title = `IP: ${ip} (已捕获)`;
+            document.title = `IP: ${ip}`; 
             document.getElementById('ipTitle').innerHTML = t.ipDetected.replace('{ip}', ip);
         }
 
@@ -207,10 +211,8 @@
         printInfo(t.os, navigator.platform);
         printInfo(t.lang, navigator.language || navigator.languages[0]);
         printInfo(t.tz, Intl.DateTimeFormat().resolvedOptions().timeZone);
-        // 这里使用了 t.available
         printInfo(t.screen, `${screen.width}x${screen.height} (${t.available}: ${screen.availWidth}x${screen.availHeight})`);
         printInfo(t.color, `${screen.colorDepth}bit / DPR: ${window.devicePixelRatio}`);
-        // 这里使用了 t.cores
         printInfo(t.cpu, `${navigator.hardwareConcurrency} ${t.cores} / ${navigator.deviceMemory || t.unknown}GB`);
         printInfo(t.touch, navigator.maxTouchPoints);
         
