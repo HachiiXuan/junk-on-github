@@ -9,12 +9,12 @@ So why am I uploading these? To host the web pages, so I can access my junk anyt
 If you find it interesting, feel free to change whatever you want.
 
 ### Available Links
-**[Analog Horror - Tornado]**
-Description: A simulation of an emergency broadcast system warning about a tornado. (Warning: contains flashing imagery and voice narration)
+**[Analog Horror - Tornado]**<br>
+Description: A simulation of an emergency broadcast system warning about a tornado. (Warning: contains flashing imagery and voice narration)<br>
 Link: https://hachiixuan.github.io/junk-on-github/ah-tornado/
 
-**[Probe]**
-Description: Disguised as a remote upload of user device features, meant to prank non-tech-savvy friends. This webpage actually contains no remote connections.
+**[Probe]**<br>
+Description: Disguised as a remote upload of user device features, meant to prank non-tech-savvy friends. This webpage actually contains no remote connections.<br>
 Link: https://hachiixuan.github.io/junk-on-github/probe/
 
 ---
@@ -30,10 +30,10 @@ Link: https://hachiixuan.github.io/junk-on-github/probe/
 如果你觉得有意思，你可以随便做出更改。
 
 ### 可用链接
-**[模拟恐怖-龙卷风]**
-描述：模拟紧急广播系统发布的龙卷风警报。（含频闪画面与语音播报）
+**[模拟恐怖-龙卷风]**<br>
+描述：模拟紧急广播系统发布的龙卷风警报。（含频闪画面与语音播报）<br>
 链接：https://hachiixuan.github.io/junk-on-github/ah-tornado/
 
-**[探针]**
-描述：伪装成用户设备特征被远程上传，用来对不懂技术的朋友进行恶作剧，该网页实际不含任何远程连接
+**[探针]**<br>
+描述：伪装成用户设备特征被远程上传，用来对不懂技术的朋友进行恶作剧，该网页实际不含任何远程连接。<br>
 链接：https://hachiixuan.github.io/junk-on-github/probe/
