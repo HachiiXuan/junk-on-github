@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emergency Broadcast System</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;background:#000;overflow:hidden;
+    font-family:"Courier New","PingFang SC","Microsoft YaHei",Consolas,monospace;
+    user-select:none;cursor:default;}
+
+  #startScreen{
+    position:fixed;inset:0;z-index:200;background:#000;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;
+    transition:opacity .9s ease;
+  }
+  #startScreen.gone{opacity:0;pointer-events:none;}
+  .ss-title{
+    font-size:clamp(15px,2.1vw,22px);letter-spacing:.45em;text-indent:.45em;
+    color:#3c4a7a;font-weight:400;text-align:center;
+  }
+  #startBtn{
+    background:transparent;border:1px solid #2a3560;color:#8e9ec9;
+    padding:16px 46px;font-family:inherit;font-size:14px;letter-spacing:.3em;text-indent:.3em;
+    cursor:pointer;transition:all .4s;
+  }
+  #startBtn:hover{
+    border-color:#5a7ac0;color:#dce6ff;
+    box-shadow:0 0 40px rgba(70,110,220,.35), inset 0 0 24px rgba(70,110,220,.12);
+  }
+  .ss-warn{
+    font-size:11px;color:#2e3a5e;letter-spacing:.15em;text-align:center;line-height:2.2;
+  }
+  #langBtn{
+    background:transparent;border:1px solid #1a2a44;color:#4a6a90;
+    padding:6px 20px;font-family:inherit;font-size:11px;letter-spacing:.2em;
+    cursor:pointer;transition:all .4s;margin-top:-10px;
+  }
+  #langBtn:hover{
+    border-color:#4a6a90;color:#8e9ec9;
+  }
+
+  #screen{
+    position:fixed;inset:0;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 42%, #1a1ac4 0%, #0a0a86 45%, #04044a 78%, #01012a 100%);
+    transition:background 1.2s;
+  }
+
+  #main{
+    position:absolute;inset:0;z-index:2;
+    display:flex;flex-direction:column;
+    padding:3vh 5vw 2vh;
+    animation: microShake .2s steps(2) infinite;
+  }
+  @keyframes microShake{
+    0%,100%{transform:translate(0,0)}
+    25%{transform:translate(-.4px,.35px)}
+    50%{transform:translate(.35px,-.4px)}
+    75%{transform:translate(-.3px,-.3px)}
+  }
+
+  #topBar,#botBar{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:clamp(9px,1.05vw,13px);
+    letter-spacing:.25em;
+    color:#a8bcf0;
+    text-shadow:0 0 12px rgba(140,180,255,.45);
+    padding-bottom:1vh;
+    border-bottom:1px solid rgba(150,185,255,.22);
+    flex:0 0 auto;
+  }
+  #botBar{
+    border-bottom:none;
+    border-top:1px solid rgba(150,185,255,.22);
+    padding-top:1vh;padding-bottom:0;
+    color:#7c8fc4;
+  }
+
+  #bigTitle{
+    flex:0 0 auto;
+    text-align:center;
+    margin-top:2.4vh;
+    font-size:clamp(20px,4.8vw,52px);
+    font-weight:700;
+    letter-spacing:.25em;
+    text-indent:.25em;
+    color:#ffffff;
+    opacity:0;
+    transition:opacity .35s;
+    text-shadow:
+      -1.5px 0 rgba(255,60,110,.5),
+       1.5px 0 rgba(60,230,255,.5),
+       0 0 28px rgba(190,215,255,.55),
+       0 0 80px rgba(120,170,255,.28);
+    min-height:1.2em;
+  }
+  #bigTitle.on{opacity:1;}
+  #bigTitle.flick{animation:titleFlick .3s steps(1) 2;}
+  @keyframes titleFlick{
+    0%,100%{opacity:1}
+    50%{opacity:.15}
+  }
+
+  #storm{
+    flex:1 1 auto;min-height:0;
+    display:flex;align-items:center;justify-content:center;
+    margin:0.8vh 0;
+    position: relative;
+    z-index: 1;
+	padding-bottom: 16vh;
+  }
+  #tornadoSvg{width:90%;height:90%;display:block;overflow:visible;}
+
+  /* 修复：将字幕盒子改为绝对定位，悬浮在画面下方，不再挤压上面的图形 */
+  #lineBox{
+    position: absolute;
+    bottom: 8vh;
+    left: 5vw;
+    width: 90vw;
+    max-height: 25vh;
+    overflow-y: auto;
+    display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
+    gap:.7vh;
+    padding-top:1vh;
+    padding-bottom:1.4vh;
+    scrollbar-width:none;
+    pointer-events: none; /* 让鼠标事件穿透，避免挡住下层 */
+    z-index: 5;
+  }
+  #lineBox::-webkit-scrollbar{display:none;}
+
+  .line{
+    font-size:clamp(11px,1.5vw,17px);
+    letter-spacing:.15em;
+    color:#e6eeff;
+    opacity:0;
+    transform:translateY(7px);
+    transition:opacity .7s ease, transform .7s ease, color .7s ease;
+    text-shadow:
+      -1px 0 rgba(255,60,110,.42),
+       1px 0 rgba(60,230,255,.42),
+       0 0 16px rgba(170,200,255,.4);
+    text-align:center;
+    line-height:1.5;
+  }
+  .line.in{opacity:1;transform:translateY(0);}
+  .line.old{opacity:.35;color:#9fb2e0;}
+  .line.warn{
+    color:#fff3a8;
+    text-shadow:-1px 0 rgba(255,120,40,.5),1px 0 rgba(60,230,255,.4),0 0 18px rgba(255,230,140,.5);
+  }
+  .line.speaking{ color:#ffffff; }
+
+  #noise{
+    position:absolute;inset:0;width:100%;height:100%;
+    image-rendering:pixelated;
+    mix-blend-mode:screen;
+    opacity:.07;pointer-events:none;z-index:10;
+  }
+  #scanlines{
+    position:absolute;inset:0;z-index:11;pointer-events:none;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,.24) 3px,
+      rgba(0,0,0,.24) 4px
+    );
+  }
+  #vignette{
+    position:absolute;inset:0;z-index:12;pointer-events:none;
+    background:
+      radial-gradient(ellipse at center, rgba(0,0,0,0) 38%, rgba(0,0,0,.75) 100%),
+      linear-gradient(to bottom, rgba(0,0,0,.35) 0%, rgba(0,0,0,0) 9%),
+      linear-gradient(to top,    rgba(0,0,0,.4)  0%, rgba(0,0,0,0) 7%);
+  }
+
+  .trackBar{
+    position:absolute;left:0;right:0;z-index:13;pointer-events:none;
+    background:rgba(200,225,255,.55);
+    mix-blend-mode:screen;
+    animation: trackMove .38s linear forwards;
+  }
+  @keyframes trackMove{
+    0%  {transform:translateY(0)   scaleY(1);  opacity:.8;}
+    100%{transform:translateY(14px) scaleY(.3);opacity:0;}
+  }
+
+  .glitch-overlay{
+    position:fixed;inset:0;z-index:50;pointer-events:none;
+    opacity:0;transition:opacity .1s;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(255,0,0,.08) 0,
+      rgba(0,255,255,.08) 1px,
+      transparent 2px,
+      transparent 4px
+    );
+  }
+  .glitch-overlay.on{
+    opacity:1;
+    animation:glitchShift .08s steps(2) infinite;
+  }
+  @keyframes glitchShift{
+    0%{transform:translate(0,0)}
+    50%{transform:translate(-2px,1px)}
+    100%{transform:translate(1px,-1px)}
+  }
+
+  #restartBtn{
+    position:fixed;left:50%;bottom:7%;transform:translateX(-50%);
+    z-index:60;
+    background:transparent;border:1px solid #2a3560;color:#8e9ec9;
+    padding:12px 32px;font-family:inherit;font-size:12px;
+    letter-spacing:.5em;text-indent:.5em;
+    cursor:pointer;opacity:0;pointer-events:none;
+    transition:all .6s;
+  }
+  #restartBtn.show{opacity:1;pointer-events:auto;}
+  #restartBtn:hover{
+    border-color:#5a7ac0;color:#dce6ff;
+    box-shadow:0 0 32px rgba(70,110,220,.4);
+  }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <div class="ss-title" id="ssTitle">EMERGENCY BROADCAST</div>
+  <button id="langBtn">🌐 中文 / English</button>
+  <button id="startBtn">RECEIVE SIGNAL</button>
+  <div class="ss-warn" id="ssWarn">This broadcast contains flashing imagery and voice narration<br>Headphones recommended · View alone</div>
+</div>
+
+<div id="screen">
+  <div id="main">
+    <div id="topBar">
+      <span id="topBarText">EMERGENCY BROADCAST</span>
+      <span id="topBarSub">EBS · WEATHER ALERT</span>
+    </div>
+    <div id="bigTitle"></div>
+    <div id="storm">
+      <svg id="tornadoSvg" preserveAspectRatio="xMidYMax meet"></svg>
+    </div>
+    <div id="botBar">
+      <span id="clock">00:00:00</span>
+      <span id="botBarSub">CH 04 · LOCAL</span>
+    </div>
+  </div>
+  <div id="lineBox"></div>
+  <canvas id="noise"></canvas>
+  <div id="scanlines"></div>
+  <div id="vignette"></div>
+</div>
+
+<div class="glitch-overlay" id="glitchOverlay"></div>
+
+<button id="restartBtn">↻ RECEIVE AGAIN</button>
+
+<script>
+(function(){
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════
+   🌐 语言配置区（默认英文，检测到中文则切换）
+   ═══════════════════════════════════════════════════════════ */
+let currentLang = 'en';
+if (navigator.language && navigator.language.toLowerCase().includes('zh')) {
+    currentLang = 'zh';
+}
+
+const UI_TEXTS = {
+    en: {
+        title: 'Emergency Broadcast System',
+        ssTitle: 'EMERGENCY BROADCAST',
+        startBtn: 'RECEIVE SIGNAL',
+        ssWarn: 'This broadcast contains flashing imagery and voice narration<br>Headphones recommended · View alone',
+        topBar: 'EMERGENCY BROADCAST',
+        topBarSub: 'EBS · WEATHER ALERT',
+        botBarSub: 'CH 04 · LOCAL',
+        restartBtn: '↻ RECEIVE AGAIN'
+    },
+    zh: {
+        title: '紧急广播系统',
+        ssTitle: '紧 急 广 播 系 统',
+        startBtn: '接 收 信 号',
+        ssWarn: '本片段包含频闪画面与语音播报<br>建议佩戴耳机 · 建议独自观看',
+        topBar: '紧急广播系统',
+        topBarSub: 'EBS · 气象预警',
+        botBarSub: 'CH 04 · 本地',
+        restartBtn: '↻ 重 新 接 收'
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   📜 中英文台词脚本区（时长未做任何改动，保持原节奏）
+   ═══════════════════════════════════════════════════════════ */
+
+const SCRIPT_EN = {
+  intro: [
+    { type: 'title', text: 'EMERGENCY BROADCAST', speak: 'Emergency Broadcast System', duration: 2.9 },
+    { type: 'title', text: 'TORNADO WARNING',     speak: 'Tornado warning',            duration: 2.6 }
+  ],
+  stages: [
+    {
+      build: makeNormal, bg: ['#1a1ac4', '#0a0a86'],
+      tone: { oscs: [{ freq: 55, type: 'sine' }], gain: 0.05 },
+      voice: { rate: 0.88, pitch: 1.0 },
+      lines: [
+        { type: 'title', text: 'STANDARD TORNADO', speak: 'Standard tornado', duration: 3.2 },
+        { type: 'line',  text: 'Category F2 · Common vortex', speak: 'Category F two, common vortex', duration: 4.0 },
+        { type: 'line',  text: 'Wind speed: 180 km/h', speak: 'Wind speed, one hundred eighty kilometers per hour', duration: 5.2 },
+        { type: 'line',  text: 'Width: approx. 90 meters', speak: 'Width, approximately ninety meters', duration: 4.0 },
+        { type: 'line',  text: 'Direction: east-northeast', speak: 'Direction, east northeast', duration: 3.6 },
+        { type: 'line',  text: 'Seek shelter in a basement or the lowest floor immediately', warn: true, speak: 'Seek shelter in a basement, or the lowest floor of the building, immediately', duration: 6.8 },
+        { type: 'line',  text: 'Stay away from windows. Crouch down. Cover your head.', warn: true, speak: 'Stay away from windows. Crouch down. Cover your head with heavy blankets.', duration: 6.4 },
+        { type: 'line',  text: '', duration: 1.2 }
+      ]
+    },
+    {
+      build: makeInvert, bg: ['#1a1a90', '#08086a'],
+      tone: { oscs: [{ freq: 45, type: 'sine' }, { freq: 67, type: 'sine' }], gain: 0.06 },
+      voice: { rate: 0.72, pitch: 0.7 },
+      lines: [
+        { type: 'title', text: 'INVERTED TORNADO', speak: 'Inverted tornado', duration: 3.4 },
+        { type: 'line',  text: 'Category: Unknown · Vortex reversed', speak: 'Category, unknown. Vortex reversed.', duration: 4.4 },
+        { type: 'line',  text: 'Wind speed: 380 km/h, upward', speak: 'Wind speed, three hundred eighty kilometers per hour, upward', duration: 5.6 },
+        { type: 'line',  text: 'Width: approx. 180 meters at base', speak: 'Width, approximately one hundred eighty meters at the base', duration: 5.4 },
+        { type: 'line',  text: 'Direction: cannot be determined', speak: 'Direction, cannot be determined', duration: 4.4 },
+        { type: 'line',  text: 'Do not enter the basement. It will pass from below.', warn: true, speak: 'Do not enter the basement. It will pass from below.', duration: 5.6 },
+        { type: 'line',  text: 'Remain standing. Do not look up.', warn: true, speak: 'Remain standing. Do not look up.', duration: 4.8 },
+        { type: 'line',  text: '', duration: 1.2 }
+      ]
+    },
+    {
+      build: makeTriple, bg: ['#301a80', '#1a0a50'],
+      tone: { oscs: [{ freq: 42, type: 'sine' }, { freq: 84, type: 'triangle' }], gain: 0.07 },
+      voice: { rate: 0.88, pitch: 0.55 },
+      lines: [
+        { type: 'title', text: 'TRIPLE VORTEX', speak: 'Triple vortex', duration: 3.2 },
+        { type: 'line',  text: 'Category: Multiple · Cluster storm', speak: 'Category, multiple. Cluster storm.', duration: 4.2 },
+        { type: 'line',  text: 'Wind speed: 200 km/h per funnel', speak: 'Wind speed, two hundred kilometers per hour, per funnel', duration: 5.6 },
+        { type: 'line',  text: 'Width: 300 meters total', speak: 'Width, three hundred meters total', duration: 4.2 },
+        { type: 'line',  text: 'Direction: encircling', speak: 'Direction, encircling', duration: 3.6 },
+        { type: 'line',  text: 'No safe direction. Three vortices are closing.', warn: true, speak: 'No safe direction. Three vortices are closing.', duration: 5.8 },
+        { type: 'line',  text: 'Stay completely still. Do not move.', warn: true, speak: 'Stay completely still. Do not move.', duration: 4.8 },
+        { type: 'line',  text: '', duration: 1.2 }
+      ]
+    },
+    {
+      build: makeEye, bg: ['#0a0a40', '#04042a'],
+      tone: { oscs: [{ freq: 33, type: 'sine' }, { freq: 49.5, type: 'sine' }], gain: 0.045 },
+      voice: { rate: 0.62, pitch: 0.45 },
+      lines: [
+        { type: 'title', text: 'THE STORM EYE', speak: 'The storm eye', duration: 3.8 },
+        { type: 'line',  text: 'Category: Zero · No wind state', speak: 'Category, zero. No wind state.', duration: 4.2 },
+        { type: 'line',  text: 'Wind speed: 0 km/h', speak: 'Wind speed, zero kilometers per hour', duration: 4.2 },
+        { type: 'line',  text: 'It is not moving.', speak: 'It is not moving.', duration: 4.0 },
+        { type: 'line',  text: 'It is not rotating.', speak: 'It is not rotating.', duration: 4.0 },
+        { type: 'line',  text: 'It is looking at you.', warn: true, speak: 'It is looking at you.', duration: 4.6 },
+        { type: 'line',  text: 'Do not answer any voice that calls your name.', warn: true, speak: 'Do not answer any voice that calls your name.', duration: 6.6 },
+        { type: 'line',  text: '', duration: 1.4 }
+      ]
+    }
+  ],
+  outro: [
+    { type: 'title', text: 'BROADCAST ENDS', speak: 'Broadcast ends.', duration: 3.2 },
+    { type: 'line',  text: 'Thank you for watching.', speak: 'Thank you for watching.', duration: 3.6 },
+    { type: 'line',  text: 'Please confirm all windows are sealed.', warn: true, speak: 'Please confirm all windows are sealed.', duration: 4.6 }
+  ],
+  tailBeforeRestart: 3.0
+};
+
+const SCRIPT_ZH = {
+  intro: [
+    { type: 'title', text: '紧 急 广 播 系 统', speak: '紧急广播系统', duration: 2.8 },
+    { type: 'title', text: '龙 卷 风 警 报',  speak: '龙卷风警报', duration: 2.6 }
+  ],
+  stages: [
+    {
+      build: makeNormal, bg: ['#1a1ac4', '#0a0a86'],
+      tone: { oscs: [{ freq: 55, type: 'sine' }], gain: 0.05 },
+      voice: { rate: 0.88, pitch: 1.0 },
+      lines: [
+        { type: 'title', text: '标 准 龙 卷 风', speak: '标准龙卷风', duration: 2.8 },
+        { type: 'line',  text: '等级 F 二 · 普通涡旋', speak: '等级 F 二，普通涡旋', duration: 3.6 },
+        { type: 'line',  text: '风速：每小时 180 公里', speak: '风速，每小时一百八十公里', duration: 4.4 },
+        { type: 'line',  text: '宽度：约 90 米', speak: '宽度，约九十米', duration: 3.4 },
+        { type: 'line',  text: '移动方向：东北偏东', speak: '移动方向，东北偏东', duration: 3.4 },
+        { type: 'line',  text: '立即前往地下室，或建筑最底层', warn: true, speak: '立即前往地下室，或建筑最底层', duration: 4.6 },
+        { type: 'line',  text: '远离窗户，蹲下，用厚毯护住头部', warn: true, speak: '远离窗户，蹲下，用厚毯护住头部', duration: 5.0 },
+        { type: 'line',  text: '', duration: 1.2 }
+      ]
+    },
+    {
+      build: makeInvert, bg: ['#1a1a90', '#08086a'],
+      tone: { oscs: [{ freq: 45, type: 'sine' }, { freq: 67, type: 'sine' }], gain: 0.06 },
+      voice: { rate: 0.72, pitch: 0.7 },
+      lines: [
+        { type: 'title', text: '倒 立 龙 卷 风', speak: '倒立龙卷风', duration: 3.2 },
+        { type: 'line',  text: '等级：未知 · 涡旋反转', speak: '等级，未知，涡旋反转', duration: 4.2 },
+        { type: 'line',  text: '风速：每小时 380 公里，向上', speak: '风速，每小时三百八十公里，向上', duration: 5.6 },
+        { type: 'line',  text: '宽度：底部约 180 米', speak: '宽度，底部约一百八十米', duration: 4.4 },
+        { type: 'line',  text: '移动方向：无法测定', speak: '移动方向，无法测定', duration: 4.0 },
+        { type: 'line',  text: '不要进入地下室。它会从下方经过。', warn: true, speak: '不要进入地下室。它会从下方经过', duration: 5.4 },
+        { type: 'line',  text: '保持站立。不要抬头看。', warn: true, speak: '保持站立。不要抬头看', duration: 4.6 },
+        { type: 'line',  text: '', duration: 1.2 }
+      ]
+    },
+    {
+      build: makeTriple, bg: ['#301a80', '#1a0a50'],
+      tone: { oscs: [{ freq: 42, type: 'sine' }, { freq: 84, type: 'triangle' }], gain: 0.07 },
+      voice: { rate: 0.88, pitch: 0.55 },
+      lines: [
+        // ★★★ 修复发音：显示保持"三 重 涡 旋"，但 TTS 朗读使用"三虫涡旋" ★★★
+        { type: 'title', text: '三 重 涡 旋', speak: '三虫涡旋', duration: 3.0 },
+        { type: 'line',  text: '等级：多重 · 集群风暴', speak: '等级，多重，集群风暴', duration: 4.0 },
+        { type: 'line',  text: '风速：每支每小时 200 公里', speak: '风速，每支每小时二百公里', duration: 5.0 },
+        { type: 'line',  text: '宽度：总计 300 米', speak: '宽度，总计三百米', duration: 3.8 },
+        { type: 'line',  text: '移动方向：合围', speak: '移动方向，合围', duration: 3.4 },
+        { type: 'line',  text: '没有安全方向。三支涡旋正在闭合。', warn: true, speak: '没有安全方向。三支涡旋正在闭合', duration: 5.6 },
+        { type: 'line',  text: '请保持静止。不要移动。', warn: true, speak: '请保持静止。不要移动', duration: 4.4 },
+        { type: 'line',  text: '', duration: 1.2 }
+      ]
+    },
+    {
+      build: makeEye, bg: ['#0a0a40', '#04042a'],
+      tone: { oscs: [{ freq: 33, type: 'sine' }, { freq: 49.5, type: 'sine' }], gain: 0.045 },
+      voice: { rate: 0.62, pitch: 0.45 },
+      lines: [
+        { type: 'title', text: '风 暴 眼', speak: '风暴眼', duration: 3.6 },
+        { type: 'line',  text: '等级：零 · 无风状态', speak: '等级，零，无风状态', duration: 4.4 },
+        { type: 'line',  text: '风速：0 公里/小时', speak: '风速，零公里每小时', duration: 4.0 },
+        { type: 'line',  text: '它没有在移动。', speak: '它没有在移动', duration: 3.8 },
+        { type: 'line',  text: '它没有在旋转。', speak: '它没有在旋转', duration: 3.8 },
+        { type: 'line',  text: '它在看你。', warn: true, speak: '它在看你', duration: 4.4 },
+        { type: 'line',  text: '不要回应，任何呼唤你名字的声音。', warn: true, speak: '不要回应，任何呼唤你名字的声音', duration: 6.4 },
+        { type: 'line',  text: '', duration: 1.4 }
+      ]
+    }
+  ],
+  outro: [
+    { type: 'title', text: '广 播 结 束', speak: '广播结束', duration: 3.0 },
+    { type: 'line',  text: '感 谢 您 的 观 看 。', speak: '感谢您的观看', duration: 3.4 },
+    { type: 'line',  text: '请 确 认 您 的 窗 户 是 否 关 好 。', warn: true, speak: '请确认您的窗户是否关好', duration: 4.4 }
+  ],
+  tailBeforeRestart: 3.0
+};
+
+let currentScript = currentLang === 'en' ? SCRIPT_EN : SCRIPT_ZH;
+
+/* ═══════════════════════════════════════════════════════════
+   ⚙️ 核心播放逻辑（未改动）
+   ═══════════════════════════════════════════════════════════ */
+
+const screenEl   = document.getElementById('screen');
+const bigTitle   = document.getElementById('bigTitle');
+const lineBox    = document.getElementById('lineBox');
+const clockEl    = document.getElementById('clock');
+const svg        = document.getElementById('tornadoSvg');
+const startScr   = document.getElementById('startScreen');
+const startBtn   = document.getElementById('startBtn');
+const langBtn    = document.getElementById('langBtn');
+const restartBtn = document.getElementById('restartBtn');
+const glitchOv   = document.getElementById('glitchOverlay');
+
+const NS = 'http://www.w3.org/2000/svg';
+svg.setAttribute('viewBox', '0 0 300 300');
+
+/* ═══════════ TTS 语音 ═══════════ */
+let ttsVoice = null;
+const ttsSupported = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
+
+function pickVoice(){
+  if (!ttsSupported) return;
+  const voices = speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return;
+
+  if (currentLang === 'zh') {
+    ttsVoice = voices.find(v => v.lang === 'zh-CN') || voices.find(v => v.lang === 'zh_CN') || voices.find(v => v.lang && v.lang.toLowerCase().indexOf('zh') === 0);
+  } else {
+    ttsVoice = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang === 'en_US') || voices.find(v => v.lang && v.lang.toLowerCase().indexOf('en') === 0);
+  }
+}
+if (ttsSupported){
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+function markSpeaking(el){
+  el.classList.add('speaking');
+  setTimeout(() => el.classList.remove('speaking'), 2400);
+}
+
+function speak(text, voice){
+  if (!ttsSupported || !text) return;
+  voice = voice || { rate: 0.88, pitch: 1.0 };
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = currentLang === 'zh' ? 'zh-CN' : 'en-US';
+    u.rate = voice.rate !== undefined ? voice.rate : 0.88;
+    u.pitch = voice.pitch !== undefined ? voice.pitch : 1.0;
+    u.volume = 1.0;
+    if (ttsVoice) u.voice = ttsVoice;
+
+    if (droneGain && audioCtx){
+      const t = audioCtx.currentTime;
+      const base = droneGain.gain.value;
+      droneGain.gain.cancelScheduledValues(t);
+      droneGain.gain.setValueAtTime(base, t);
+      droneGain.gain.linearRampToValueAtTime(Math.max(base * 0.35, 0.005), t + 0.08);
+      u.onend = function(){
+        if (!droneGain || !audioCtx) return;
+        const t2 = audioCtx.currentTime;
+        droneGain.gain.cancelScheduledValues(t2);
+        droneGain.gain.setValueAtTime(droneGain.gain.value, t2);
+        droneGain.gain.linearRampToValueAtTime(base, t2 + 0.4);
+      };
+    }
+    speechSynthesis.speak(u);
+  } catch(e){}
+}
+
+/* ═══════════ 噪点渲染 ═══════════ */
+const nc = document.getElementById('noise');
+const nctx = nc.getContext('2d');
+const NW = 220, NH = 124;
+nc.width = NW; nc.height = NH;
+const nImg = nctx.createImageData(NW, NH);
+const nBuf = new Uint32Array(nImg.data.buffer);
+let noiseLevel = 0.07;
+
+function renderNoise(){
+  const b = nBuf;
+  for (let i = 0; i < b.length; i++){
+    const v = (Math.random()*255)|0;
+    b[i] = (255<<24)|(v<<16)|(v<<8)|v;
+  }
+  nctx.putImageData(nImg, 0, 0);
+  nc.style.opacity = noiseLevel;
+}
+
+/* ═══════════ SVG 辅助函数 ═══════════ */
+function ellipse(g, cx, cy, rx, ry, opts){
+  opts = opts || {};
+  const el = document.createElementNS(NS, 'ellipse');
+  el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+  el.setAttribute('rx', rx); el.setAttribute('ry', ry);
+  el.setAttribute('fill', opts.fill || 'none');
+  el.setAttribute('stroke', opts.stroke || 'rgb(198,222,255)');
+  el.setAttribute('stroke-opacity', opts.opacity !== undefined ? opts.opacity : 0.3);
+  el.setAttribute('stroke-width', opts.width || 1);
+  g.appendChild(el);
+  return el;
+}
+
+function path(g, d, opts){
+  opts = opts || {};
+  const el = document.createElementNS(NS, 'path');
+  el.setAttribute('d', d);
+  el.setAttribute('fill', opts.fill || 'rgba(170,205,255,0.055)');
+  el.setAttribute('stroke', opts.stroke || 'rgba(200,225,255,0.40)');
+  el.setAttribute('stroke-width', opts.width || 1.2);
+  g.appendChild(el);
+  return el;
+}
+
+function groundLine(g){
+  const el = document.createElementNS(NS, 'line');
+  el.setAttribute('x1', 15); el.setAttribute('y1', 255);
+  el.setAttribute('x2', 285); el.setAttribute('y2', 255);
+  el.setAttribute('stroke', 'rgba(180,210,255,0.18)');
+  el.setAttribute('stroke-width', '1');
+  g.appendChild(el);
+}
+
+/* ═══════════ 四种龙卷风形态 ═══════════ */
+function makeNormal(){
+  const g = document.createElementNS(NS, 'g');
+  path(g, 'M 65 50 C 85 130, 135 200, 145 260 L 155 260 C 165 200, 215 130, 235 50 Z');
+  const arcs = [];
+  const N = 26;
+  for (let i = 0; i < N; i++){
+    const t = i / (N - 1);
+    const y = 52 + t * 200;
+    const halfW = 7 + 78 * Math.pow(1 - t, 1.55);
+    const ry = 2.4 + 5.2 * (1 - t);
+    arcs.push({ el: ellipse(g, 150, y, halfW, ry), t });
+  }
+  groundLine(g);
+  return { g, arcs, mode: 'normal' };
+}
+
+function makeInvert(){
+  const g = document.createElementNS(NS, 'g');
+  path(g, 'M 140 55 C 140 120, 75 200, 55 255 L 245 255 C 225 200, 160 120, 160 55 Z');
+  const arcs = [];
+  const N = 26;
+  for (let i = 0; i < N; i++){
+    const t = i / (N - 1);
+    const y = 60 + t * 192;
+    const halfW = 8 + 74 * Math.pow(t, 1.6);
+    const ry = 2.4 + 5.2 * t;
+    arcs.push({ el: ellipse(g, 150, y, halfW, ry), t });
+  }
+  groundLine(g);
+  return { g, arcs, mode: 'invert' };
+}
+
+function makeTriple(){
+  const g = document.createElementNS(NS, 'g');
+  const arcs = [];
+  const funnels = [
+    { cx: 80,  topY: 78, botY: 253, topHW: 32, botHW: 6 },
+    { cx: 150, topY: 55, botY: 253, topHW: 48, botHW: 8 },
+    { cx: 220, topY: 78, botY: 253, topHW: 32, botHW: 6 }
+  ];
+  funnels.forEach(function(f, fi){
+    const p =
+      'M ' + (f.cx - f.topHW) + ' ' + f.topY +
+      ' C ' + (f.cx - f.topHW * 0.6) + ' ' + (f.topY + (f.botY - f.topY) * 0.5) +
+      ', ' + (f.cx - f.botHW * 2.5) + ' ' + (f.botY - 25) +
+      ', ' + (f.cx - f.botHW) + ' ' + f.botY +
+      ' L ' + (f.cx + f.botHW) + ' ' + f.botY +
+      ' C ' + (f.cx + f.botHW * 2.5) + ' ' + (f.botY - 25) +
+      ', ' + (f.cx + f.topHW * 0.6) + ' ' + (f.topY + (f.botY - f.topY) * 0.5) +
+      ', ' + (f.cx + f.topHW) + ' ' + f.topY + ' Z';
+    path(g, p);
+    const N = 18;
+    for (let i = 0; i < N; i++){
+      const t = i / (N - 1);
+      const y = f.topY + t * (f.botY - f.topY);
+      const halfW = f.botHW + (f.topHW - f.botHW) * Math.pow(1 - t, 1.5);
+      const ry = 2.0 + 4.5 * (1 - t);
+      arcs.push({ el: ellipse(g, f.cx, y, halfW, ry), t, funnelIdx: fi });
+    }
+  });
+  groundLine(g);
+  return { g, arcs, mode: 'triple' };
+}
+
+function makeEye(){
+  const g = document.createElementNS(NS, 'g');
+  path(g, 'M 65 70 C 65 25, 235 25, 235 70 C 235 135, 170 200, 158 255 L 142 255 C 130 200, 65 135, 65 70 Z');
+  const hole = ellipse(g, 150, 115, 58, 40, { fill: '#000', stroke: 'rgba(180,210,255,0.28)', opacity: 0.95, width: 1.5 });
+  hole.setAttribute('fill-opacity', '0.95');
+  const pupil = ellipse(g, 150, 115, 12, 28, { fill: '#02020a', stroke: 'rgba(140,180,255,0.35)', opacity: 1, width: 1 });
+  pupil.setAttribute('fill-opacity', '1');
+  const hl = ellipse(g, 154, 100, 4, 8, { fill: 'rgba(255,255,255,0.28)', opacity: 0.28 });
+  hl.setAttribute('stroke-opacity', '0');
+  const arcs = [];
+  const N = 18;
+  for (let i = 0; i < N; i++){
+    const t = i / (N - 1);
+    let y = t < 0.3 ? 45 + (t / 0.3) * 35 : 155 + ((t - 0.3) / 0.7) * 95;
+    const nt = (y - 45) / 205;
+    const halfW = 7 + 78 * Math.pow(1 - nt, 1.55);
+    const ry = 2.4 + 5.2 * (1 - nt);
+    arcs.push({ el: ellipse(g, 150, y, halfW, ry), t, baseY: y });
+  }
+  groundLine(g);
+  return { g, arcs, mode: 'eye', pupil: pupil };
+}
+
+/* ═══════════ 动画循环 ═══════════ */
+let animT = 0;
+let swirl = 1.0;
+let currentTornado = null;
+let lastT = performance.now();
+
+function updateCurrent(dt){
+  if (!currentTornado) return;
+  const mode = currentTornado.mode;
+  if (mode === 'normal'){
+    const freq = 3.4, offset = 8.6;
+    currentTornado.arcs.forEach(a => {
+      const s = 0.5 + 0.5 * Math.sin(animT * freq - a.t * offset);
+      a.el.setAttribute('stroke-opacity', Math.min(0.72, 0.10 + 0.40 * s + 0.22 * (1 - a.t)).toFixed(3));
+      a.el.setAttribute('stroke-width', (0.65 + 1.5 * s).toFixed(2));
+    });
+  } else if (mode === 'invert'){
+    const freq = -2.2, offset = 6.5;
+    currentTornado.arcs.forEach(a => {
+      const s = 0.5 + 0.5 * Math.sin(animT * freq - a.t * offset);
+      a.el.setAttribute('stroke-opacity', Math.min(0.70, 0.08 + 0.35 * s + 0.25 * a.t).toFixed(3));
+      a.el.setAttribute('stroke-width', (0.60 + 1.4 * s).toFixed(2));
+    });
+  } else if (mode === 'triple'){
+    currentTornado.arcs.forEach(a => {
+      const speed = a.funnelIdx === 1 ? 3.0 : 2.0;
+      const s = 0.5 + 0.5 * Math.sin(animT * speed - a.t * 8 + a.funnelIdx * 2.1);
+      a.el.setAttribute('stroke-opacity', Math.min(0.70, 0.10 + 0.42 * s + 0.20 * (1 - a.t)).toFixed(3));
+      a.el.setAttribute('stroke-width', (0.60 + 1.4 * s).toFixed(2));
+    });
+  } else if (mode === 'eye'){
+    currentTornado.arcs.forEach(a => {
+      const s = 0.5 + 0.5 * Math.sin(animT * 0.8 - a.t * 2);
+      a.el.setAttribute('stroke-opacity', Math.min(0.65, 0.08 + 0.30 * s + 0.20 * (1 - a.t)).toFixed(3));
+      a.el.setAttribute('stroke-width', (0.55 + 1.2 * s).toFixed(2));
+    });
+    if (currentTornado.pupil){
+      const breathe = 1 + 0.13 * Math.sin(animT * 1.2);
+      currentTornado.pupil.setAttribute('rx', (12 * breathe).toFixed(2));
+      currentTornado.pupil.setAttribute('ry', (28 * (2 - breathe)).toFixed(2));
+    }
+  }
+}
+
+function loop(now){
+  const dt = Math.min((now - lastT) / 1000, 0.1);
+  lastT = now;
+  animT += dt * swirl;
+  updateCurrent(dt);
+  renderNoise();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ═══════════ 音频合成 ═══════════ */
+let audioCtx = null;
+let noiseBuf = null;
+let droneGain = null;
+let currentTone = null;
+let audioReady = false;
+
+function initAudio(){
+  if (audioReady) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  audioCtx = new AC();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const len = Math.floor(audioCtx.sampleRate * 2);
+  noiseBuf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = audioCtx.createBufferSource();
+  src.buffer = noiseBuf; src.loop = true;
+  const bp = audioCtx.createBiquadFilter();
+  bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.5;
+  const ng = audioCtx.createGain(); ng.gain.value = 0.012;
+  src.connect(bp); bp.connect(ng); ng.connect(audioCtx.destination);
+  src.start();
+
+  const o1 = audioCtx.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 38;
+  const o2 = audioCtx.createOscillator(); o2.type = 'sine';     o2.frequency.value = 57.3;
+  const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 160;
+  droneGain = audioCtx.createGain(); droneGain.gain.value = 0.0001;
+  o1.connect(lp); o2.connect(lp); lp.connect(droneGain); droneGain.connect(audioCtx.destination);
+  o1.start(); o2.start();
+  audioReady = true;
+}
+
+function rampDrone(target, time){
+  if (!droneGain || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  droneGain.gain.cancelScheduledValues(t);
+  droneGain.gain.setValueAtTime(Math.max(droneGain.gain.value, 0.0001), t);
+  droneGain.gain.linearRampToValueAtTime(target, t + time);
+}
+
+function ebsTone(dur){
+  if (!audioReady) return;
+  const t = audioCtx.currentTime;
+  [853, 960].forEach(f => {
+    const o = audioCtx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.055, t + 0.03);
+    g.gain.setValueAtTime(0.055, t + dur - 0.06);
+    g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t); o.stop(t + dur + 0.1);
+  });
+}
+
+function beep(freq, dur, vol, type){
+  if (!audioReady) return;
+  const t = audioCtx.currentTime;
+  const o = audioCtx.createOscillator();
+  o.type = type || 'square'; o.frequency.value = freq || 1000;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol || 0.035, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.1));
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(t); o.stop(t + (dur || 0.1) + 0.05);
+}
+
+function noiseBurst(dur, vol){
+  if (!audioReady) return;
+  const t = audioCtx.currentTime;
+  const len = Math.floor(audioCtx.sampleRate * (dur || 0.3));
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const s = audioCtx.createBufferSource(); s.buffer = buf;
+  const hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 500;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(vol || 0.06, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + (dur || 0.3));
+  s.connect(hp); hp.connect(g); g.connect(audioCtx.destination);
+  s.start(t); s.stop(t + (dur || 0.3) + 0.05);
+}
+
+function setTone(config){
+  if (!audioReady) return;
+  const t = audioCtx.currentTime;
+  if (currentTone){
+    const old = currentTone;
+    old.gain.gain.cancelScheduledValues(t);
+    old.gain.gain.setValueAtTime(old.gain.gain.value, t);
+    old.gain.gain.linearRampToValueAtTime(0, t + 0.6);
+    const toKill = old;
+    setTimeout(() => {
+      toKill.nodes.forEach(n => { try { n.stop(); } catch(e){} try { n.disconnect(); } catch(e){} });
+      try { toKill.gain.disconnect(); } catch(e){}
+    }, 750);
+    currentTone = null;
+  }
+  if (!config) return;
+  const master = audioCtx.createGain(); master.gain.value = 0;
+  master.gain.linearRampToValueAtTime(config.gain || 0.04, t + 0.8);
+  master.connect(audioCtx.destination);
+  const nodes = [];
+  (config.oscs || []).forEach(o => {
+    const osc = audioCtx.createOscillator();
+    osc.type = o.type || 'sine'; osc.frequency.value = o.freq;
+    osc.connect(master); osc.start(); nodes.push(osc);
+  });
+  currentTone = { nodes: nodes, gain: master };
+}
+
+/* ═══════════ 通用工具 ═══════════ */
+const timers = [];
+function at(sec, fn){ timers.push(setTimeout(fn, sec * 1000)); }
+function clearLines(){ lineBox.innerHTML = ''; }
+
+function appendLine(text, warn){
+  const d = document.createElement('div');
+  d.className = 'line' + (warn ? ' warn' : '');
+  d.textContent = text;
+  lineBox.appendChild(d);
+  requestAnimationFrame(() => d.classList.add('in'));
+  const all = lineBox.children;
+  for (let i = 0; i < all.length - 1; i++) all[i].classList.add('old');
+  lineBox.scrollTop = lineBox.scrollHeight;
+  markSpeaking(d);
+}
+
+function setBg(c1, c2){
+  screenEl.style.background = 'radial-gradient(ellipse at 50% 42%, ' + c1 + ' 0%, ' + c2 + ' 45%, #04044a 78%, #01012a 100%)';
+}
+
+function triggerGlitch(dur){
+  glitchOv.classList.add('on');
+  setTimeout(() => glitchOv.classList.remove('on'), dur || 400);
+}
+
+function trackingBar(){
+  const bar = document.createElement('div');
+  bar.className = 'trackBar';
+  bar.style.top = (Math.random() * 100) + '%';
+  bar.style.height = (2 + Math.random() * 9) + 'px';
+  bar.style.opacity = (0.25 + Math.random() * 0.5).toFixed(2);
+  screenEl.appendChild(bar);
+  setTimeout(() => bar.remove(), 420);
+}
+
+let clockTimer = null;
+function startClock(){
+  const t0 = Date.now();
+  clockTimer = setInterval(() => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    const p = n => String(n).padStart(2, '0');
+    clockEl.textContent = p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60);
+  }, 250);
+}
+
+/* ═══════════ 播报单条台词 ═══════════ */
+function runItem(item, stage){
+  if (!item) return;
+  const voice = stage && stage.voice ? stage.voice : null;
+  if (item.type === 'title'){
+    bigTitle.textContent = item.text;
+    bigTitle.classList.add('on', 'flick');
+    setTimeout(() => bigTitle.classList.remove('flick'), 700);
+    if (item.speak) speak(item.speak, voice);
+  } else if (item.type === 'line'){
+    if (item.text){
+      appendLine(item.text, item.warn);
+      const speakText = item.speak !== undefined && item.speak !== null ? item.speak : item.text.replace(/\s+/g, '');
+      if (speakText) speak(speakText, voice);
+    }
+  }
+}
+
+/* ═══════════ 进入阶段 ═══════════ */
+function beginStage(stage){
+  if (ttsSupported) speechSynthesis.cancel();
+  triggerGlitch(300);
+  noiseBurst(0.2, 0.06);
+  beep(180, 0.15, 0.04, 'sawtooth');
+  clearLines();
+  setTimeout(() => {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    const built = stage.build();
+    svg.appendChild(built.g);
+    currentTornado = built;
+    if (stage.bg) setBg(stage.bg[0], stage.bg[1]);
+    if (stage.tone) setTone(stage.tone);
+  }, 180);
+  runItem(stage.lines[0], stage);
+}
+
+/* ═══════════ 主时间线 ═══════════ */
+let started = false;
+
+function beginSequence(){
+  startClock();
+  at(0.0, () => {
+    ebsTone(1.7);
+    rampDrone(0.06, 3);
+    setBg('#1a1ac4', '#0a0a86');
+  });
+  let cursor = 0.6;
+
+  currentScript.intro.forEach(item => {
+    at(cursor, () => runItem(item, null));
+    cursor += item.duration;
+  });
+
+  currentScript.stages.forEach(stage => {
+    at(cursor, () => beginStage(stage));
+    cursor += stage.lines[0].duration;
+    for (let i = 1; i < stage.lines.length; i++){
+      at(cursor, () => runItem(stage.lines[i], stage));
+      cursor += stage.lines[i].duration;
+    }
+  });
+
+  currentScript.outro.forEach(item => {
+    at(cursor, () => runItem(item, null));
+    cursor += item.duration;
+  });
+
+  const endTime = cursor;
+  at(endTime, () => {
+    if (ttsSupported) speechSynthesis.cancel();
+    bigTitle.classList.remove('on');
+    clearLines();
+    setTone(null);
+    rampDrone(0.0001, 1.5);
+    let n = noiseLevel;
+    const iv = setInterval(() => { n *= 0.95; noiseLevel = n; if (n < 0.01) clearInterval(iv); }, 100);
+  });
+
+  at(endTime + currentScript.tailBeforeRestart, () => {
+    restartBtn.classList.add('show');
+    document.title = UI_TEXTS[currentLang].title;
+  });
+
+  (function scheduleGlitch(){
+    const delay = 2000 + Math.random() * 4500;
+    timers.push(setTimeout(() => { if (started) trackingBar(); scheduleGlitch(); }, delay));
+  })();
+}
+
+/* ═══════════ 语言切换与 UI 更新 ═══════════ */
+function updateUILang(){
+  document.documentElement.lang = currentLang;
+  document.title = UI_TEXTS[currentLang].title;
+  document.getElementById('ssTitle').innerText = UI_TEXTS[currentLang].ssTitle;
+  document.getElementById('startBtn').innerText = UI_TEXTS[currentLang].startBtn;
+  document.getElementById('ssWarn').innerHTML = UI_TEXTS[currentLang].ssWarn;
+  document.getElementById('topBarText').innerText = UI_TEXTS[currentLang].topBar;
+  document.getElementById('topBarSub').innerText = UI_TEXTS[currentLang].topBarSub;
+  document.getElementById('botBarSub').innerText = UI_TEXTS[currentLang].botBarSub;
+  document.getElementById('restartBtn').innerText = UI_TEXTS[currentLang].restartBtn;
+  currentScript = currentLang === 'en' ? SCRIPT_EN : SCRIPT_ZH;
+  pickVoice();
+}
+
+langBtn.addEventListener('click', () => {
+  if (started) return;
+  currentLang = currentLang === 'en' ? 'zh' : 'en';
+  updateUILang();
+});
+
+updateUILang();
+
+/* ═══════════ 启动 ═══════════ */
+function start(){
+  if (started) return;
+  started = true;
+  langBtn.style.display = 'none';
+  initAudio();
+  if (ttsSupported) pickVoice();
+  startScr.style.transition = 'none';
+  startScr.classList.add('gone');
+
+  const blackout = document.createElement('div');
+  blackout.style.cssText = 'position:fixed;inset:0;background:#000;z-index:300;';
+  document.body.appendChild(blackout);
+
+  setTimeout(() => {
+    blackout.remove();
+    document.title = UI_TEXTS[currentLang].title;
+    beginSequence();
+  }, 1000);
+}
+
+startBtn.addEventListener('click', start);
+window.addEventListener('keydown', e => {
+  if (!started && (e.key === 'Enter' || e.key === ' ')) start();
+});
+restartBtn.addEventListener('click', () => {
+  if (ttsSupported) speechSynthesis.cancel();
+  location.reload();
+});
+
+})();
+</script>
+</body>
+</html>
