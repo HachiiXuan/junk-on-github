@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wukong Prime Sim</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <!-- HUD -->
+    <div id="kill-counter">Kills: 0</div>
+
+    <!-- 场景 -->
+    <div id="ground"></div>
+    <div id="monkey-clone"></div>
+    <div id="monkey"></div>
+    <div id="boss"></div>
+
+    <!-- BOSS 血条 -->
+    <div id="boss-health-bar">
+      <div id="boss-health-bar-inner"></div>
+    </div>
+
+    <!-- 设置面板 -->
+    <aside id="settings-panel">
+      <div class="panel-header">
+        <span data-i18n="settingsTitle">Settings</span>
+      </div>
+
+      <div class="panel-body">
+        <!-- 语言切换：置顶 -->
+        <div class="setting-row">
+          <label data-i18n="language">Language</label>
+          <button id="lang-toggle" class="lang-btn" type="button">中文</button>
+        </div>
+
+        <!-- 紫卡模式 -->
+        <div class="setting-row">
+          <label for="purple-card" data-i18n="purpleCard">Riven Mode</label>
+          <label class="switch">
+            <input type="checkbox" id="purple-card">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- 召唤分身 -->
+        <div class="setting-row">
+          <label for="summon-clone" data-i18n="summonClone">Summon Clone</label>
+          <label class="switch">
+            <input type="checkbox" id="summon-clone">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- 攻击范围 -->
+        <div class="setting-row column">
+          <div class="row-head">
+            <label for="attack-range" data-i18n="attackRange">Attack Range</label>
+            <span class="value-badge" id="attack-range-value">200</span>
+          </div>
+          <input type="range" id="attack-range" min="50" max="400" step="10" value="200">
+        </div>
+
+        <!-- 钢铁之路 -->
+        <div class="setting-row">
+          <label for="steel-path" data-i18n="steelPath">Steel Path Mode</label>
+          <label class="switch">
+            <input type="checkbox" id="steel-path">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p class="hint" id="mode-hint">Normal: 1s / spawn · Max 50</p>
+      </div>
+    </aside>
+
+    <!-- 面板开关 -->
+    <button id="settings-toggle" aria-label="Open settings">☰</button>
+  </div>
+
+  <!-- 音效 -->
+  <audio id="landing-sound" src="sounds/landing.mp3"></audio>
+  <audio id="rising-sound" src="sounds/rising.mp3"></audio>
+
+  <!-- 脚本：i18n 必须最先加载 -->
+  <script src="js/i18n.js"></script>
+  <script src="js/damage.js"></script>
+  <script src="js/effects.js"></script>
+  <script src="js/enemy.js"></script>
+  <script src="js/boss.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

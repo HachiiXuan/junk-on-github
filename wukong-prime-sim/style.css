@@ -1,0 +1,506 @@
+* { box-sizing: border-box; }
+
+body, html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #0a0b10;
+  user-select: none;
+  cursor: crosshair;
+}
+
+#game-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at 50% 20%, #2a2d3a 0%, #1a1c25 60%, #0a0b10 100%);
+  overflow: hidden;
+  transform: translate(0, 0);
+}
+#game-container.shaking {
+  animation: containerShake 0.38s ease-out;
+}
+@keyframes containerShake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-7px,  3px); }
+  25% { transform: translate( 6px, -4px); }
+  40% { transform: translate(-5px,  2px); }
+  55% { transform: translate( 4px,  3px); }
+  70% { transform: translate(-2px, -2px); }
+  85% { transform: translate( 1px, -1px); }
+}
+
+/* ---------------- HUD：杀敌数右上角 ---------------- */
+#kill-counter {
+  position: absolute;
+  top: 14px;
+  right: 26px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000,
+     0 0 14px rgba(255, 200, 80, 0.55);
+  z-index: 1001;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---------------- 设置面板 ---------------- */
+#settings-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100%;
+  background: rgba(18, 20, 28, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-right: 1px solid rgba(255, 200, 80, 0.25);
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.6);
+  transform: translateX(-100%);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  color: #e8e8e8;
+  cursor: default;
+}
+body.panel-open #settings-panel { transform: translateX(0); }
+
+.panel-header {
+  padding: 18px 20px;
+  font-size: 17px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #FFC850;
+  border-bottom: 1px solid rgba(255, 200, 80, 0.2);
+  text-shadow: 0 0 8px rgba(255, 200, 80, 0.4);
+}
+
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+.setting-row.column { flex-direction: column; align-items: stretch; }
+.setting-row:last-of-type { border-bottom: none; }
+.setting-row label { font-size: 15px; color: #d0d0d0; cursor: pointer; }
+
+.row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.value-badge {
+  font-size: 13px;
+  font-weight: bold;
+  color: #FFC850;
+  background: rgba(255, 200, 80, 0.12);
+  padding: 2px 10px;
+  border-radius: 10px;
+  min-width: 42px;
+  text-align: center;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #FFC850;
+  border: 2px solid #1a1c25;
+  box-shadow: 0 0 8px rgba(255, 200, 80, 0.6);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #FFC850;
+  border: 2px solid #1a1c25;
+  box-shadow: 0 0 8px rgba(255, 200, 80, 0.6);
+  cursor: pointer;
+}
+/* 语言切换按钮 */
+.lang-btn {
+  min-width: 68px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: rgba(255, 200, 80, 0.12);
+  border: 1px solid rgba(255, 200, 80, 0.55);
+  color: #FFC850;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+.lang-btn:hover {
+  background: rgba(255, 200, 80, 0.22);
+  box-shadow: 0 0 12px rgba(255, 200, 80, 0.45);
+}
+.lang-btn:active {
+  transform: scale(0.96);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .slider {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 24px;
+  transition: background-color 0.25s;
+}
+.switch .slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  top: 3px;
+  background: #f0f0f0;
+  border-radius: 50%;
+  transition: transform 0.25s, background 0.25s;
+}
+.switch input:checked + .slider { background-color: #FFC850; }
+.switch input:checked + .slider::before {
+  transform: translateX(20px);
+  background: #1a1c25;
+}
+
+.hint {
+  font-size: 12px;
+  color: #8a8a95;
+  margin: 10px 0 0;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+}
+
+#settings-toggle {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(18, 20, 28, 0.85);
+  border: 1px solid rgba(255, 200, 80, 0.35);
+  color: #FFC850;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1150;
+  transition: left 0.32s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+#settings-toggle:hover {
+  background: rgba(255, 200, 80, 0.15);
+  box-shadow: 0 0 12px rgba(255, 200, 80, 0.4);
+}
+body.panel-open #settings-toggle { left: 296px; }
+
+/* ---------------- 猴子（玩家） ---------------- */
+#monkey {
+  position: absolute;
+  width: 200px;
+  height: 300px;
+  background-image: url('images/monkey.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  top: -150px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  transition: top 0.5s ease-in-out;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* ---------------- 猴子（分身）：金色光晕 ---------------- */
+#monkey-clone {
+  position: absolute;
+  width: 200px;
+  height: 300px;
+  background-image: url('images/monkey.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  top: -150px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: none;
+  transition: top 0.5s ease-in-out;
+  z-index: 999;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 0 14px rgba(255, 215, 0, 0.95))
+    drop-shadow(0 0 30px rgba(255, 200, 0, 0.55))
+    saturate(1.15);
+}
+
+/* ---------------- 地面 ---------------- */
+#ground {
+  position: absolute;
+  width: 100%;
+  height: 20%;
+  background: linear-gradient(to bottom, #303030, #1a1a1a);
+  border-top: 2px solid #444;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* ---------------- 怪物 ---------------- */
+.monster {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  left: calc((100% - 200px) * var(--x, 0.5));
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ---------------- BOSS ---------------- */
+#boss {
+  position: absolute;
+  width: 450px;
+  height: 450px;
+  background-image: url('images/boss.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  top: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  z-index: 20;
+  pointer-events: none;
+  animation: bossFloat 4s ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 24px rgba(0, 240, 255, 0.75))
+    drop-shadow(0 0 52px rgba(0, 220, 255, 0.45));
+}
+@keyframes bossFloat {
+  0%, 100% { transform: translate(-50%, 0); }
+  50%      { transform: translate(-50%, -22px); }
+}
+#boss.hit {
+  animation: bossFloat 4s ease-in-out infinite, bossHit 0.18s ease-out;
+}
+@keyframes bossHit {
+  0%, 100% {
+    filter:
+      brightness(1)
+      drop-shadow(0 0 24px rgba(0, 240, 255, 0.75))
+      drop-shadow(0 0 52px rgba(0, 220, 255, 0.45));
+  }
+  50% {
+    filter:
+      brightness(2.8)
+      drop-shadow(0 0 24px #ffffff)
+      drop-shadow(0 0 52px rgba(0, 240, 255, 0.9));
+  }
+}
+#boss.defeated {
+  animation: bossDefeated 0.55s ease-out forwards;
+}
+@keyframes bossDefeated {
+  0%   { filter: brightness(1) saturate(1); transform: translateX(-50%) scale(1);   opacity: 1; }
+  40%  { filter: brightness(4) saturate(0); transform: translateX(-50%) scale(1.25); opacity: 1; }
+  100% { filter: brightness(6) saturate(0); transform: translateX(-50%) scale(0.1);  opacity: 0; }
+}
+
+/* ---------------- BOSS 血条：纯红 + 金属边框 ---------------- */
+#boss-health-bar {
+  position: absolute;
+  width: 40%;
+  height: 22px;
+  background: rgba(8, 4, 4, 0.92);
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1001;
+  display: none;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 40, 40, 0.7);
+  box-shadow:
+    0 0 10px rgba(255, 30, 30, 0.55),
+    0 0 26px rgba(255, 30, 30, 0.28),
+    inset 0 0 10px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+#boss-health-bar-inner {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(180deg,
+    #ff5252 0%,
+    #ec1c1c 45%,
+    #b00000 100%);
+  transition: width 0.25s ease-out;
+  position: relative;
+  box-shadow:
+    0 0 12px rgba(255, 60, 60, 0.9),
+    inset 0 0 12px rgba(255, 140, 140, 0.45);
+}
+#boss-health-bar-inner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.4)  0%,
+    rgba(255, 255, 255, 0.05) 40%,
+    rgba(0, 0, 0, 0.25)       100%);
+  pointer-events: none;
+}
+#boss-health-bar-inner::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #ff3030;
+  box-shadow: 0 0 8px #ff3030, 0 0 16px #ff3030;
+}
+
+/* ---------------- 伤害飘字 ---------------- */
+.damage-text {
+  position: absolute;
+  font-size: 36px;
+  font-weight: bold;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 100;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
+  opacity: 1;
+  transition: opacity 0.85s ease-out;
+}
+.damage-text.appear { animation: dmgPop 0.18s ease-out; }
+@keyframes dmgPop {
+  0%   { transform: translate(-50%, -50%) scale(0.5);  opacity: 0.4; }
+  60%  { transform: translate(-50%, -50%) scale(1.18); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
+}
+.damage-text.purple { font-size: 42px; }
+.damage-text.fading { opacity: 0; }
+
+/* ---------------- 粒子 ---------------- */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 999;
+  animation: particle 0.6s ease-out forwards;
+}
+.particle.fire  { background-color: #FF4500; box-shadow: 0 0 6px #FF4500; }
+.particle.spark { background-color: #FFFFFF; box-shadow: 0 0 6px #FFD700; }
+.particle.dust  { background-color: #8B7355; opacity: 0.7; }
+
+@keyframes particle {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--x), var(--y)) scale(0); opacity: 0; }
+}
+
+/* ---------------- 冲击波 ---------------- */
+.shockwave {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 998;
+  animation: shockwave 0.55s ease-out forwards;
+}
+@keyframes shockwave {
+  0%   { transform: scale(0); opacity: 1; }
+  70%  { opacity: 0.7; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* ---------------- 放射碎片 ---------------- */
+.debris {
+  position: absolute;
+  width: 46px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    rgba(255, 220, 120, 0)   0%,
+    rgba(255, 220, 120, 0.9) 30%,
+    rgba(255, 255, 255, 1)   55%,
+    rgba(255, 255, 255, 0)   100%);
+  pointer-events: none;
+  z-index: 997;
+  transform-origin: 0 50%;
+  margin-top: -1.5px;
+  animation: debrisFly 0.6s ease-out forwards;
+}
+@keyframes debrisFly {
+  0% {
+    transform: rotate(var(--rot, 0deg)) translateX(0) scaleX(0.2);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--rot, 0deg)) translateX(var(--dist, 180px)) scaleX(1.2);
+    opacity: 0;
+  }
+}
+
+/* ---------------- 屏幕闪光 ---------------- */
+.screen-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1500;
+  animation: screenFlash 0.35s ease-out forwards;
+}
+@keyframes screenFlash {
+  0%   { opacity: 0.9; }
+  100% { opacity: 0; }
+}
