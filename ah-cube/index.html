@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anomalous Creature Log</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;background:#000;overflow:hidden;
+    font-family:"Courier New","PingFang SC","Microsoft YaHei",Consolas,monospace;
+    user-select:none;cursor:default;}
+
+  /* ══════════ 启动屏 ══════════ */
+  #startScreen{
+    position:fixed;inset:0;z-index:200;background:#000;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;
+    transition:opacity .9s ease;
+  }
+  #startScreen.gone{opacity:0;pointer-events:none;}
+  .ss-title{
+    font-size:clamp(15px,2.1vw,22px);letter-spacing:.85em;text-indent:.85em;
+    color:#2a3a5a;font-weight:400;text-align:center;
+  }
+  #startBtn{
+    background:transparent;border:1px solid #2a3a5a;color:#8a9ac0;
+    padding:16px 46px;font-family:inherit;font-size:14px;letter-spacing:.55em;text-indent:.55em;
+    cursor:pointer;transition:all .4s;
+  }
+  #startBtn:hover{
+    border-color:#5a7ac0;color:#c8d8ff;
+    box-shadow:0 0 40px rgba(70,110,220,.35), inset 0 0 24px rgba(70,110,220,.1);
+  }
+  .ss-warn{
+    font-size:11px;color:#242e44;letter-spacing:.22em;text-align:center;line-height:2.2;
+  }
+  #langBtn{
+    background:transparent;border:1px solid #1a2a44;color:#4a6a90;
+    padding:6px 20px;font-family:inherit;font-size:11px;letter-spacing:.2em;
+    cursor:pointer;transition:all .4s;margin-top:-10px;
+  }
+  #langBtn:hover{
+    border-color:#4a6a90;color:#8a9ac0;
+  }
+
+  /* ══════════ 屏幕 ══════════ */
+  #screen{
+    position:fixed;inset:0;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 55%, #0a0e1e 0%, #050710 55%, #010204 100%);
+    transition:background 1.4s;
+  }
+
+  #main{
+    position:absolute;inset:0;z-index:2;
+    display:flex;flex-direction:column;
+    padding:3vh 5vw 2vh;
+    animation: microShake .24s steps(2) infinite;
+  }
+  @keyframes microShake{
+    0%,100%{transform:translate(0,0)}
+    25%{transform:translate(-.4px,.35px)}
+    50%{transform:translate(.35px,-.4px)}
+    75%{transform:translate(-.3px,-.3px)}
+  }
+
+  #topBar,#botBar{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:clamp(9px,1.05vw,13px);
+    letter-spacing:.34em;
+    color:#6a82b8;
+    text-shadow:0 0 12px rgba(120,180,255,.32);
+    padding-bottom:1vh;
+    border-bottom:1px solid rgba(120,180,255,.16);
+    flex:0 0 auto;
+    z-index:5;
+    white-space:nowrap;
+  }
+  #botBar{
+    border-bottom:none;
+    border-top:1px solid rgba(120,180,255,.16);
+    padding-top:1vh;padding-bottom:0;
+    color:#4a5a80;
+  }
+
+  #bigTitle{
+    flex:0 0 auto;
+    text-align:center;
+    margin-top:2vh;
+    font-size:clamp(18px,3.8vw,46px);
+    font-weight:700;
+    letter-spacing:.24em;
+    text-indent:.24em;
+    color:#c8dcff;
+    opacity:0;
+    transition:opacity .35s;
+    text-shadow:
+      -1.5px 0 rgba(255,60,20,.32),
+       1.5px 0 rgba(60,200,255,.32),
+       0 0 28px rgba(140,180,255,.55),
+       0 0 80px rgba(80,140,255,.25);
+    min-height:1.2em;
+    z-index:5;
+  }
+  #bigTitle.on{opacity:1;}
+  #bigTitle.flick{animation:titleFlick .3s steps(1) 2;}
+  @keyframes titleFlick{
+    0%,100%{opacity:1}
+    50%{opacity:.15}
+  }
+
+  /* ══════════ 3D 舞台 ══════════ */
+  #stage{
+    flex:1 1 auto;min-height:0;
+    position:relative;
+    display:flex;align-items:center;justify-content:center;
+    perspective:900px;
+    perspective-origin:50% 42%;
+    padding-bottom: 12vh;
+  }
+
+  #world{
+    position:relative;
+    width:1px;height:1px;
+    transform-style:preserve-3d;
+    transform: rotateX(-18deg) rotateY(-32deg);
+  }
+
+  .ground{
+    position:absolute;
+    left:-500px;top:-500px;
+    width:1000px;height:1000px;
+    transform: translateY(100px) rotateX(90deg);
+    background-image:
+      linear-gradient(rgba(90,150,240,.14) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(90,150,240,.14) 1px, transparent 1px);
+    background-size:50px 50px;
+    pointer-events:none;
+    mask-image:radial-gradient(ellipse at 50% 50%, #000 15%, transparent 55%);
+    -webkit-mask-image:radial-gradient(ellipse at 50% 50%, #000 15%, transparent 55%);
+  }
+
+  .ground-glow{
+    position:absolute;
+    left:-200px;top:-200px;
+    width:400px;height:400px;
+    transform: translateY(100px) rotateX(90deg);
+    background:radial-gradient(ellipse at 50% 50%, rgba(100,160,255,.20), transparent 65%);
+    pointer-events:none;
+  }
+
+  /* ══════════ 立方体 ══════════ */
+  .cube{
+    position:absolute;
+    left:-90px;top:-90px;
+    width:180px;height:180px;
+    transform-style:preserve-3d;
+    opacity:0;
+    pointer-events:none;
+    animation: floatCube 4.5s ease-in-out infinite;
+  }
+  .cube.active{ opacity:1; }
+  @keyframes floatCube{
+    0%,100%{ transform: translateY(0); }
+    50%    { transform: translateY(-6px); }
+  }
+
+  .face{
+    position:absolute;
+    width:180px;height:180px;
+    display:flex;
+    align-items:center;justify-content:center;
+    font-family:"Courier New","Lucida Console",Consolas,monospace;
+    font-weight:700;
+    font-size:64px;
+    letter-spacing:-.04em;
+    border:2px solid rgba(20,35,70,.55);
+    backface-visibility:hidden;
+    overflow:hidden;
+    color:#0c1a33;
+  }
+  .face::after{
+    content:'';
+    position:absolute;inset:0;
+    background-image:
+      linear-gradient(rgba(0,0,0,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,.08) 1px, transparent 1px);
+    background-size:20px 20px;
+    pointer-events:none;
+    opacity:.5;
+  }
+
+  .c-broken .face, .c-organ .face{ backface-visibility: visible; }
+
+  .front  { transform: translateZ(90px); }
+  .back   { transform: rotateY(180deg) translateZ(90px); }
+  .right  { transform: rotateY(90deg)  translateZ(90px); }
+  .left   { transform: rotateY(-90deg) translateZ(90px); }
+  .top    { transform: rotateX(90deg)  translateZ(90px); }
+  .bottom { transform: rotateX(-90deg) translateZ(90px); }
+
+  .c-standard .front  { background:#6b9ee0; box-shadow: inset 0 0 60px rgba(40,80,160,.35); }
+  .c-standard .back   { background:#4a7ab8; }
+  .c-standard .right  { background:#3e6a9e; }
+  .c-standard .left   { background:#3e6a9e; }
+  .c-standard .top    { background:#7baee8; }
+  .c-standard .bottom { background:#2d5480; }
+
+  .c-broken .front  { background:#5a8cd0; clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%, 0 30%); box-shadow: inset 0 0 60px rgba(30,50,120,.4); }
+  .c-broken .back   { background:#1e3555; }
+  .c-broken .right  { background:#345c8a; clip-path: polygon(0 0, 100% 0, 100% 60%, 78% 68%, 82% 100%, 0 100%); }
+  .c-broken .left   { background:#345c8a; }
+  .c-broken .top    { background:#6b9ee0; clip-path: polygon(0 0, 70% 0, 62% 45%, 100% 55%, 100% 100%, 0 100%); }
+  .c-broken .bottom { background:#264a72; }
+
+  .crack{
+    position:absolute;
+    background:linear-gradient(120deg, rgba(4,8,20,0) 0%, rgba(4,8,20,.9) 48%, rgba(4,8,20,.9) 52%, rgba(4,8,20,0) 100%);
+    pointer-events:none;
+  }
+  .crack.c1{ left:20%; top:0; width:3px; height:55%; transform:rotate(14deg); }
+  .crack.c2{ left:55%; top:35%; width:2px; height:60%; transform:rotate(-22deg); }
+  .crack.c3{ left:5%; top:45%; width:2px; height:40%; transform:rotate(58deg); }
+
+  .c-organ .front  { background:#4a7ab8; clip-path: polygon(0 0, 100% 0, 100% 22%, 74% 26%, 68% 46%, 78% 56%, 66% 76%, 74% 100%, 0 100%); box-shadow: inset 0 0 60px rgba(20,30,90,.55); }
+  .c-organ .back   { background:#1e3555; }
+  .c-organ .right  { background:#345c8a; clip-path: polygon(0 0, 100% 0, 100% 46%, 78% 54%, 84% 72%, 100% 80%, 100% 100%, 0 100%); }
+  .c-organ .left   { background:#345c8a; }
+  .c-organ .top    { background:#6b9ee0; clip-path: polygon(0 0, 58% 0, 52% 38%, 84% 46%, 88% 100%, 0 100%); }
+  .c-organ .bottom { background:#264a72; }
+
+  .organs{
+    position:absolute; left:0;top:0; width:180px;height:180px;
+    transform: translateZ(-20px);
+    background: radial-gradient(ellipse at 50% 50%, #3a0806 0%, #200404 55%, #0a0101 100%);
+    display:flex;align-items:center;justify-content:center; overflow:hidden;
+  }
+  .organ-inner{ position:relative; width:130px; height:120px; }
+  .lung{
+    position:absolute; top:12px; width:42px;height:74px;
+    background: radial-gradient(ellipse at 40% 35%, #a85048 0%, #7a2018 55%, #400808 100%);
+    border-radius: 45% 45% 50% 50% / 55% 55% 45% 45%;
+    box-shadow: inset 0 0 20px rgba(0,0,0,.7), 0 0 14px rgba(160,40,30,.3);
+    filter: blur(.4px);
+  }
+  .lung.left  { left:6px;  transform: rotate(-4deg); }
+  .lung.right { right:6px; transform: rotate(4deg); }
+  .heart{
+    position:absolute; left:50%; top:50%; width:44px;height:44px; margin-left:-22px;margin-top:-30px;
+    background: radial-gradient(circle at 38% 32%, #c0402c 0%, #801414 50%, #400404 100%);
+    border-radius: 50% 50% 45% 45% / 55% 55% 45% 45%;
+    box-shadow: inset 0 0 18px rgba(0,0,0,.6), 0 0 18px rgba(220,40,20,.5);
+    animation: beat 1.05s ease-in-out infinite;
+  }
+  @keyframes beat{ 0%,100%{ transform: scale(1); } 22%{ transform: scale(1.14); } 40%{ transform: scale(.98); } 58%{ transform: scale(1.08); } }
+  .vessel{ position:absolute; background: #5a1010; border-radius: 4px; box-shadow: inset 0 0 4px rgba(0,0,0,.7); }
+  .vessel.v1{ left:48px; top:36px; width:34px; height:6px; transform: rotate(-8deg); }
+  .vessel.v2{ left:44px; top:58px; width:40px; height:5px; transform: rotate(6deg); }
+  .vessel.v3{ left:62px; top:12px; width:5px;  height:34px; transform: rotate(3deg); }
+
+  .blood-drip{ position:absolute; background: linear-gradient(to bottom, rgba(120,10,8,.92), rgba(60,4,4,.4)); border-radius: 0 0 40% 40%; pointer-events:none; z-index:3; }
+  .bd1{ left:26%; top:86%; width:4px; height:26px; }
+  .bd2{ left:58%; top:82%; width:3px; height:34px; }
+  .bd3{ left:78%; top:90%; width:3px; height:18px; }
+
+  .c-nail .front  { background:#5a8cd0; color:#0c1a33; }
+  .c-nail .back   { background:#3e6a9e; }
+  .c-nail .right  { background:#345c8a; }
+  .c-nail .left   { background:#345c8a; }
+  .c-nail .top    { background:#6b9ee0; }
+  .c-nail .bottom { background:#264a72; }
+  .c-nail{ transform: translateY(-60px) rotateZ(26deg) rotateY(14deg); animation: none; }
+
+  .nail{
+    position:absolute; left:-8px; top:-220px; width:16px; height:320px;
+    transform-style:preserve-3d; opacity:0; pointer-events:none; transition:opacity .15s;
+  }
+  .nail.active{ opacity:1; }
+  .nail-shank{ position:absolute; inset:0; background: linear-gradient(to right, #0c0c14 0%, #4a5058 22%, #c8ccd2 48%, #e4e8ec 52%, #707880 78%, #0c0c14 100%); border-radius: 3px; box-shadow: 0 0 10px rgba(0,0,0,.8); }
+  .nail-shank.perp{ transform: rotateY(90deg); background: linear-gradient(to right, #181820 0%, #666c74 22%, #ccd0d6 48%, #e8ecf0 52%, #7a828a 78%, #181820 100%); }
+  .nail-head{ position:absolute; left:50%; bottom:-9px; width:44px; height:22px; margin-left:-22px; background: radial-gradient(ellipse at 50% 35%, #b8bcc2, #505860, #1e262e); border-radius: 50%; transform: rotateX(72deg); box-shadow: 0 0 15px rgba(0,0,0,.85); }
+  .nail-tip{ position:absolute; left:50%; top:-14px; width:0;height:0; margin-left:-8px; border-left:8px solid transparent; border-right:8px solid transparent; border-bottom:14px solid #c8ccd2; filter: drop-shadow(0 0 6px rgba(200,220,255,.5)); }
+
+  /* ══════════ VHS 滤镜 ══════════ */
+  #noise{ position:absolute;inset:0;width:100%;height:100%; image-rendering:pixelated; mix-blend-mode:screen; opacity:.07;pointer-events:none;z-index:20; }
+  #scanlines{ position:absolute;inset:0;z-index:21;pointer-events:none; background:repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,.26) 3px, rgba(0,0,0,.26) 4px); }
+  #vignette{ position:absolute;inset:0;z-index:22;pointer-events:none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 34%, rgba(0,0,0,.82) 100%), linear-gradient(to bottom, rgba(0,0,0,.4) 0%, rgba(0,0,0,0) 9%), linear-gradient(to top, rgba(0,0,0,.45) 0%, rgba(0,0,0,0) 7%); }
+  .trackBar{ position:absolute;left:0;right:0;z-index:23;pointer-events:none; background:rgba(180,210,255,.4); mix-blend-mode:screen; animation: trackMove .38s linear forwards; }
+  @keyframes trackMove{ 0%{transform:translateY(0) scaleY(1); opacity:.7;} 100%{transform:translateY(14px) scaleY(.3);opacity:0;} }
+
+  .glitch-overlay{ position:fixed;inset:0;z-index:50;pointer-events:none; opacity:0;transition:opacity .1s; background:repeating-linear-gradient(to bottom, rgba(255,60,0,.06) 0, rgba(60,160,255,.06) 1px, transparent 2px, transparent 4px); }
+  .glitch-overlay.on{ opacity:1; animation:glitchShift .08s steps(2) infinite; }
+  @keyframes glitchShift{ 0%{transform:translate(0,0)} 50%{transform:translate(-2px,1px)} 100%{transform:translate(1px,-1px)} }
+
+  /* ══════════ 字幕（改成绝对定位，防止挤压上方3D图形） ══════════ */
+  #lineBox{
+    position: absolute;
+    bottom: 8vh;
+    left: 5vw;
+    width: 90vw;
+    max-height: 25vh;
+    overflow-y: auto;
+    display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
+    gap:.7vh;
+    padding-top:1vh;padding-bottom:1.4vh;
+    scrollbar-width:none;
+    pointer-events:none;
+    z-index:5;
+  }
+  #lineBox::-webkit-scrollbar{ display:none; }
+  .line{
+    font-size:clamp(11px,1.5vw,17px); letter-spacing:.18em; color:#d0e0ff;
+    opacity:0; transform:translateY(7px);
+    transition:opacity .7s ease, transform .7s ease, color .7s ease;
+    text-shadow: -1px 0 rgba(255,60,20,.32), 1px 0 rgba(60,180,255,.4), 0 0 16px rgba(140,180,255,.35);
+    text-align:center; line-height:1.5;
+  }
+  .line.in{opacity:1;transform:translateY(0);}
+  .line.old{opacity:.32;color:#7a8ab0;}
+  .line.warn{ color:#ffe08a; text-shadow:-1px 0 rgba(255,80,20,.5),1px 0 rgba(60,180,255,.35),0 0 18px rgba(255,220,120,.5); }
+  .line.speaking{ color:#ffffff; }
+
+  /* ══════════ 重播 ══════════ */
+  #restartBtn{ position:fixed;left:50%;bottom:6%;transform:translateX(-50%); z-index:60; background:transparent;border:1px solid #2a3a5a;color:#8a9ac0; padding:12px 32px;font-family:inherit;font-size:12px; letter-spacing:.5em;text-indent:.5em; cursor:pointer;opacity:0;pointer-events:none; transition:all .6s; }
+  #restartBtn.show{opacity:1;pointer-events:auto;}
+  #restartBtn:hover{ border-color:#5a7ac0;color:#c8d8ff; box-shadow:0 0 32px rgba(70,110,220,.4); }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <div class="ss-title" id="ssTitle">ANOMALOUS CREATURE LOG</div>
+  <button id="langBtn">🌐 中文 / English</button>
+  <button id="startBtn">START OBSERVATION</button>
+  <div class="ss-warn" id="ssWarn">This footage contains flashing imagery and voice narration<br>Headphones recommended · Watch alone</div>
+</div>
+
+<div id="screen">
+  <div id="main">
+    <div id="topBar">
+      <span id="topBarText">ANOMALOUS CREATURE LOG</span>
+      <span id="topBarSub">SPECIMEN · PIXEL</span>
+    </div>
+    <div id="bigTitle"></div>
+
+    <div id="stage">
+      <div id="world">
+        <div class="ground"></div>
+        <div class="ground-glow"></div>
+      </div>
+    </div>
+
+    <div id="lineBox"></div>
+
+    <div id="botBar">
+      <span id="clock">00:00:00</span>
+      <span id="botBarSub">LAB · 03</span>
+    </div>
+  </div>
+  <canvas id="noise"></canvas>
+  <div id="scanlines"></div>
+  <div id="vignette"></div>
+</div>
+
+<div class="glitch-overlay" id="glitchOverlay"></div>
+<button id="restartBtn">↻ RESTART OBSERVATION</button>
+
+<script>
+(function(){
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════
+   🌐 语言配置区（默认英文，检测到中文则切换）
+   ═══════════════════════════════════════════════════════════ */
+let currentLang = 'en';
+if (navigator.language && navigator.language.toLowerCase().includes('zh')) {
+    currentLang = 'zh';
+}
+
+const UI_TEXTS = {
+    en: {
+        title: 'Anomalous Creature Observation Log',
+        ssTitle: 'ANOMALOUS CREATURE LOG',
+        startBtn: 'START OBSERVATION',
+        ssWarn: 'This footage contains flashing imagery and voice narration<br>Headphones recommended · Watch alone',
+        topBar: 'ANOMALOUS CREATURE LOG',
+        topBarSub: 'SPECIMEN · PIXEL',
+        botBarSub: 'LAB · 03',
+        restartBtn: '↻ RESTART OBSERVATION'
+    },
+    zh: {
+        title: '异常生物观察记录',
+        ssTitle: '异 常 生 物 观 察 记 录',
+        startBtn: '开 始 观 察',
+        ssWarn: '本片段包含频闪画面与语音播报<br>建议佩戴耳机 · 建议独自观看',
+        topBar: '异常生物观察记录',
+        topBarSub: 'SPECIMEN · PIXEL',
+        botBarSub: 'LAB · 03',
+        restartBtn: '↻ 重 新 观 察'
+    }
+};
+
+/* ═══════════════════════════════════════════════════════════
+   📜 中英文台词脚本区（已修改结尾）
+   ═══════════════════════════════════════════════════════════ */
+
+const SCRIPT_EN = {
+  intro: [
+    { text: 'ANOMALOUS CREATURE LOG', speak: 'Anomalous creature observation log', duration: 3.2 },
+    { text: 'SPECIMEN ID  P X - 0 1', speak: 'Specimen I D P X zero one', duration: 3.0 }
+  ],
+  stages: [
+    {
+      id: 'standard', title: 'STANDARD SPECIMEN',
+      voice: { rate: 0.9, pitch: 1.0 },
+      lines: [
+        { text: 'Appearance intact', speak: 'Appearance intact.', duration: 3.0 },
+        { text: 'Size: 30 cm · Weight: 2 kg', speak: 'Size, thirty centimeters. Weight, two kilograms.', duration: 4.6 },
+        { text: 'Symmetrical structure · Smooth surface', speak: 'Symmetrical structure. Smooth surface.', duration: 4.2 },
+        { text: 'Emotionally stable · Non-aggressive', speak: 'Emotionally stable. Non aggressive.', duration: 4.2 },
+        { text: 'Do not feed · Do not strike', warn: true, speak: 'Do not feed. Do not strike.', duration: 4.4 },
+        { text: '', duration: 1.2 }
+      ]
+    },
+    {
+      id: 'broken', title: 'DAMAGED SPECIMEN',
+      voice: { rate: 0.78, pitch: 0.78 },
+      lines: [
+        { text: 'Shell defect detected', speak: 'Shell defect detected.', duration: 3.4 },
+        { text: 'Defect locations: top left · top right · bottom', speak: 'Defect locations, top left, top right, bottom.', duration: 5.6 },
+        { text: 'Internal structure: partially visible', speak: 'Internal structure, partially visible.', duration: 4.4 },
+        { text: 'Shell integrity: sixty-one percent', speak: 'Shell integrity, sixty one percent.', duration: 5.0 },
+        { text: 'Do not approach · Do not reach out', warn: true, speak: 'Do not approach. Do not reach out.', duration: 4.6 },
+        { text: '', duration: 1.2 }
+      ]
+    },
+    {
+      id: 'organ', title: 'EXPOSED SPECIMEN',
+      voice: { rate: 0.68, pitch: 0.55 },
+      lines: [
+        { text: 'Damage level: severe', speak: 'Damage level, severe.', duration: 3.8 },
+        { text: 'Confirmed exposed: left lung · right lung', speak: 'Confirmed exposed, left lung, right lung.', duration: 5.8 },
+        { text: 'Confirmed exposed: heart', speak: 'Confirmed exposed, heart.', duration: 4.4 },
+        { text: 'Heart is still beating', warn: true, speak: 'Heart is still beating.', duration: 4.8 },
+        { text: 'It is still smiling', warn: true, speak: 'It is still smiling.', duration: 4.8 },
+        { text: '', duration: 1.4 }
+      ]
+    },
+    {
+      id: 'nail', title: 'IMPALED SPECIMEN',
+      voice: { rate: 0.62, pitch: 0.45 },
+      lines: [
+        { text: 'Penetrating trauma detected', speak: 'Penetrating trauma detected.', duration: 4.0 },
+        { text: 'Penetrating object: metal nail', speak: 'Penetrating object, metal nail.', duration: 4.2 },
+        { text: 'Length: approximately sixty cm', speak: 'Length, approximately sixty centimeters.', duration: 4.6 },
+        { text: 'Penetration location: dead center', speak: 'Penetration location, dead center.', duration: 4.8 },
+        { text: 'It is not dead', warn: true, speak: 'It is not dead.', duration: 4.0 },
+        { text: 'It is still moving', warn: true, speak: 'It is still moving.', duration: 5.2 },
+        { text: '', duration: 1.4 }
+      ]
+    }
+  ],
+  outro: [
+    { text: 'OBSERVATION CONCLUDED', speak: 'Observation concluded.', duration: 3.4 }
+  ],
+  tailBeforeRestart: 3.0
+};
+
+const SCRIPT_ZH = {
+  intro: [
+    { text: '异 常 生 物 观 察 记 录', speak: '异常生物观察记录', duration: 3.2 },
+    { text: '个 体 编 号  P X - 0 1', speak: '个体编号 P X 零一', duration: 3.0 }
+  ],
+  stages: [
+    {
+      id: 'standard', title: '标 准 个 体',
+      voice: { rate: 0.9, pitch: 1.0 },
+      lines: [
+        { text: '外观完整', speak: '外观完整。', duration: 3.0 },
+        { text: '尺寸：30 厘米 · 重量：2 千克', speak: '尺寸，三十厘米。重量，两千克。', duration: 4.4 },
+        { text: '结构对称 · 表面平滑', speak: '结构对称。表面平滑。', duration: 3.6 },
+        { text: '情绪稳定 · 无攻击性', speak: '情绪稳定。无攻击性。', duration: 3.6 },
+        { text: '请勿投喂 · 请勿敲击', warn: true, speak: '请勿投喂。请勿敲击。', duration: 4.0 },
+        { text: '', duration: 1.2 }
+      ]
+    },
+    {
+      id: 'broken', title: '破 损 个 体',
+      voice: { rate: 0.78, pitch: 0.78 },
+      lines: [
+        { text: '检测到外壳缺损', speak: '检测到外壳缺损。', duration: 3.4 },
+        { text: '缺口位置：左上 · 右上 · 底部', speak: '缺口位置，左上，右上，底部。', duration: 5.2 },
+        { text: '内部结构：部分可见', speak: '内部结构，部分可见。', duration: 4.0 },
+        { text: '壳体完整性：百分之六十一', speak: '壳体完整性，百分之六十一。', duration: 5.0 },
+        { text: '请不要靠近 · 不要伸手', warn: true, speak: '请不要靠近。不要伸手。', duration: 4.4 },
+        { text: '', duration: 1.2 }
+      ]
+    },
+    {
+      id: 'organ', title: '暴 露 个 体',
+      voice: { rate: 0.68, pitch: 0.55 },
+      lines: [
+        { text: '破损程度：严重', speak: '破损程度，严重。', duration: 3.6 },
+        { text: '已确认暴露：左肺叶 · 右肺叶', speak: '已确认暴露，左肺叶，右肺叶。', duration: 5.4 },
+        { text: '已确认暴露：心脏', speak: '已确认暴露，心脏。', duration: 4.2 },
+        { text: '心脏仍在跳动', warn: true, speak: '心脏仍在跳动。', duration: 4.6 },
+        { text: '它仍在微笑', warn: true, speak: '它仍在微笑。', duration: 4.6 },
+        { text: '', duration: 1.4 }
+      ]
+    },
+    {
+      id: 'nail', title: '穿 刺 个 体',
+      voice: { rate: 0.62, pitch: 0.45 },
+      lines: [
+        { text: '检测到穿刺损伤', speak: '检测到穿刺损伤。', duration: 3.8 },
+        { text: '贯穿物：金属钉', speak: '贯穿物，金属钉。', duration: 3.8 },
+        { text: '长度：约 60 厘米', speak: '长度，约六十厘米。', duration: 4.0 },
+        { text: '贯穿位置：正中心', speak: '贯穿位置，正中心。', duration: 4.4 },
+        { text: '它没有死', warn: true, speak: '它没有死。', duration: 4.0 },
+        { text: '它还在动', warn: true, speak: '它还在动。', duration: 5.0 },
+        { text: '', duration: 1.4 }
+      ]
+    }
+  ],
+  outro: [
+    { text: '观 察 结 束', speak: '观察结束。', duration: 3.2 }
+  ],
+  tailBeforeRestart: 3.0
+};
+
+let currentScript = currentLang === 'en' ? SCRIPT_EN : SCRIPT_ZH;
+
+/* ═══════════════════════════════════════════════════════════
+   ⚙️ 核心播放逻辑（未改动）
+   ═══════════════════════════════════════════════════════════ */
+
+const screenEl   = document.getElementById('screen');
+const bigTitle   = document.getElementById('bigTitle');
+const lineBox    = document.getElementById('lineBox');
+const clockEl    = document.getElementById('clock');
+const world      = document.getElementById('world');
+const startScr   = document.getElementById('startScreen');
+const startBtn   = document.getElementById('startBtn');
+const langBtn    = document.getElementById('langBtn');
+const restartBtn = document.getElementById('restartBtn');
+const glitchOv   = document.getElementById('glitchOverlay');
+
+/* ═══════════ 预加载全部立方体与钉子 ═══════════ */
+const CUBE_CONFIGS = [
+  { type: 'standard', cls: 'c-standard', face: ':D' },
+  { type: 'broken',   cls: 'c-broken',   face: ':/' },
+  { type: 'organ',    cls: 'c-organ',    face: 'HD' },
+  { type: 'nail',     cls: 'c-nail',     face: 'X(' }
+];
+
+function buildCubeElement(cfg){
+  const cube = document.createElement('div');
+  cube.className = 'cube ' + cfg.cls;
+  cube.dataset.type = cfg.type;
+
+  if (cfg.type === 'organ'){
+    const organs = document.createElement('div');
+    organs.className = 'organs';
+    organs.innerHTML = '<div class="organ-inner"><div class="lung left"></div><div class="lung right"></div><div class="vessel v1"></div><div class="vessel v2"></div><div class="vessel v3"></div><div class="heart"></div></div>';
+    cube.appendChild(organs);
+  }
+
+  const faces = [
+    { cls: 'front',  text: cfg.face }, { cls: 'back',   text: '' },
+    { cls: 'right',  text: '' }, { cls: 'left',   text: '' },
+    { cls: 'top',    text: '' }, { cls: 'bottom', text: '' }
+  ];
+
+  faces.forEach(function(f){
+    const face = document.createElement('div');
+    face.className = 'face ' + f.cls;
+    if (f.text) face.textContent = f.text;
+    if (cfg.type === 'broken' && (f.cls === 'front' || f.cls === 'right')){
+      for (let i = 0; i < 3; i++){ const c = document.createElement('div'); c.className = 'crack c' + (i + 1); face.appendChild(c); }
+    }
+    if (cfg.type === 'organ' && (f.cls === 'front' || f.cls === 'right' || f.cls === 'top')){
+      for (let i = 0; i < 2; i++){ const c = document.createElement('div'); c.className = 'crack c' + (i + 2); face.appendChild(c); }
+    }
+    cube.appendChild(face);
+  });
+
+  if (cfg.type === 'organ'){
+    ['bd1','bd2','bd3'].forEach(function(b){ const bd = document.createElement('div'); bd.className = 'blood-drip ' + b; cube.appendChild(bd); });
+  }
+  return cube;
+}
+
+CUBE_CONFIGS.forEach(function(cfg){ world.appendChild(buildCubeElement(cfg)); });
+
+const nailEl = document.createElement('div');
+nailEl.className = 'nail';
+nailEl.innerHTML = '<div class="nail-shank"></div><div class="nail-shank perp"></div><div class="nail-head"></div><div class="nail-tip"></div>';
+world.appendChild(nailEl);
+
+function showCube(type){
+  world.querySelectorAll('.cube').forEach(function(c){ c.classList.toggle('active', c.dataset.type === type); });
+  nailEl.classList.toggle('active', type === 'nail');
+}
+
+/* ═══════════ 噪点渲染 ═══════════ */
+const nc = document.getElementById('noise');
+const nctx = nc.getContext('2d');
+const NW = 220, NH = 124;
+nc.width = NW; nc.height = NH;
+const nImg = nctx.createImageData(NW, NH);
+const nBuf = new Uint32Array(nImg.data.buffer);
+let noiseLevel = 0.07;
+
+function renderNoise(){
+  const b = nBuf;
+  for (let i = 0; i < b.length; i++){ const v = (Math.random()*255)|0; b[i] = (255<<24)|(v<<16)|(v<<8)|v; }
+  nctx.putImageData(nImg, 0, 0);
+  nc.style.opacity = noiseLevel;
+}
+(function loopNoise(){ renderNoise(); requestAnimationFrame(loopNoise); })();
+
+/* ═══════════ 音频合成 ═══════════ */
+let audioCtx = null, noiseBuf = null, droneGain = null, currentTone = null, heartTimer = null, audioReady = false;
+
+function initAudio(){
+  if (audioReady) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  audioCtx = new AC();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const len = Math.floor(audioCtx.sampleRate * 2);
+  noiseBuf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+
+  const src = audioCtx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+  const bp = audioCtx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 0.4;
+  const ng = audioCtx.createGain(); ng.gain.value = 0.010;
+  src.connect(bp); bp.connect(ng); ng.connect(audioCtx.destination); src.start();
+
+  const o1 = audioCtx.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = 34;
+  const o2 = audioCtx.createOscillator(); o2.type = 'sine';     o2.frequency.value = 51;
+  const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 150;
+  droneGain = audioCtx.createGain(); droneGain.gain.value = 0.0001;
+  o1.connect(lp); o2.connect(lp); lp.connect(droneGain); droneGain.connect(audioCtx.destination);
+  o1.start(); o2.start();
+  audioReady = true;
+}
+
+function rampDrone(target, time){
+  if (!droneGain || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  droneGain.gain.cancelScheduledValues(t);
+  droneGain.gain.setValueAtTime(Math.max(droneGain.gain.value, 0.0001), t);
+  droneGain.gain.linearRampToValueAtTime(target, t + time);
+}
+
+function beep(freq, dur, vol, type){
+  if (!audioReady) return;
+  const t = audioCtx.currentTime;
+  const o = audioCtx.createOscillator(); o.type = type || 'square'; o.frequency.value = freq || 1000;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.035, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.1));
+  o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + (dur || 0.1) + 0.05);
+}
+
+function noiseBurst(dur, vol){
+  if (!audioReady) return;
+  const t = audioCtx.currentTime;
+  const len = Math.floor(audioCtx.sampleRate * (dur || 0.3));
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const s = audioCtx.createBufferSource(); s.buffer = buf;
+  const hp = audioCtx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 420;
+  const g = audioCtx.createGain(); g.gain.setValueAtTime(vol || 0.06, t); g.gain.exponentialRampToValueAtTime(0.001, t + (dur || 0.3));
+  s.connect(hp); hp.connect(g); g.connect(audioCtx.destination); s.start(t); s.stop(t + (dur || 0.3) + 0.05);
+}
+
+function setTone(config){
+  if (!audioReady) return;
+  const t = audioCtx.currentTime;
+  if (currentTone){
+    const old = currentTone;
+    old.gain.gain.cancelScheduledValues(t); old.gain.gain.setValueAtTime(old.gain.gain.value, t); old.gain.gain.linearRampToValueAtTime(0, t + 0.6);
+    const toKill = old;
+    setTimeout(function(){ toKill.nodes.forEach(function(n){ try { n.stop(); } catch(e){} try { n.disconnect(); } catch(e){} }); try { toKill.gain.disconnect(); } catch(e){} }, 750);
+    currentTone = null;
+  }
+  if (!config) return;
+  const master = audioCtx.createGain(); master.gain.value = 0; master.gain.linearRampToValueAtTime(config.gain || 0.04, t + 0.8);
+  master.connect(audioCtx.destination);
+  const nodes = [];
+  (config.oscs || []).forEach(function(o){
+    const osc = audioCtx.createOscillator(); osc.type = o.type || 'sine'; osc.frequency.value = o.freq;
+    osc.connect(master); osc.start(); nodes.push(osc);
+  });
+  currentTone = { nodes: nodes, gain: master };
+}
+
+function startHeartbeat(){
+  if (!audioReady || heartTimer) return;
+  function thump(delay, vol){
+    setTimeout(function(){
+      if (!audioReady) return;
+      const t = audioCtx.currentTime;
+      const o = audioCtx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.16);
+      const g = audioCtx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + 0.34);
+    }, delay);
+  }
+  function beat(){ thump(0, 0.055); thump(190, 0.038); }
+  beat();
+  heartTimer = setInterval(beat, 1080);
+}
+function stopHeartbeat(){ if (heartTimer){ clearInterval(heartTimer); heartTimer = null; } }
+
+/* ═══════════ TTS ═══════════ */
+let ttsVoice = null;
+const ttsSupported = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
+
+function pickVoice(){
+  if (!ttsSupported) return;
+  const voices = speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return;
+  if (currentLang === 'zh') {
+    ttsVoice = voices.find(v => v.lang === 'zh-CN') || voices.find(v => v.lang === 'zh_CN') || voices.find(v => v.lang && v.lang.toLowerCase().indexOf('zh') === 0);
+  } else {
+    ttsVoice = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang === 'en_US') || voices.find(v => v.lang && v.lang.toLowerCase().indexOf('en') === 0);
+  }
+}
+if (ttsSupported){
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+function speak(text, voice){
+  if (!ttsSupported || !text) return;
+  voice = voice || { rate: 0.88, pitch: 1.0 };
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = currentLang === 'zh' ? 'zh-CN' : 'en-US';
+    u.rate = voice.rate !== undefined ? voice.rate : 0.88;
+    u.pitch = voice.pitch !== undefined ? voice.pitch : 1.0;
+    u.volume = 1.0;
+    if (ttsVoice) u.voice = ttsVoice;
+
+    if (droneGain && audioCtx){
+      const t = audioCtx.currentTime;
+      const base = droneGain.gain.value;
+      droneGain.gain.cancelScheduledValues(t); droneGain.gain.setValueAtTime(base, t); droneGain.gain.linearRampToValueAtTime(Math.max(base * 0.32, 0.004), t + 0.08);
+      u.onend = function(){
+        if (!droneGain || !audioCtx) return;
+        const t2 = audioCtx.currentTime;
+        droneGain.gain.cancelScheduledValues(t2); droneGain.gain.setValueAtTime(droneGain.gain.value, t2); droneGain.gain.linearRampToValueAtTime(base, t2 + 0.4);
+      };
+    }
+    speechSynthesis.speak(u);
+  } catch(e){}
+}
+
+/* ═══════════ 通用工具 ═══════════ */
+const timers = [];
+function at(sec, fn){ timers.push(setTimeout(fn, sec * 1000)); }
+function clearLines(){ lineBox.innerHTML = ''; }
+
+function appendLine(text, warn){
+  const d = document.createElement('div');
+  d.className = 'line' + (warn ? ' warn' : '');
+  d.textContent = text;
+  lineBox.appendChild(d);
+  requestAnimationFrame(function(){ d.classList.add('in'); });
+  const all = lineBox.children;
+  for (let i = 0; i < all.length - 1; i++){ all[i].classList.add('old'); }
+  d.classList.add('speaking');
+  setTimeout(function(){ d.classList.remove('speaking'); }, 2600);
+}
+
+function setTitle(text){
+  bigTitle.textContent = text;
+  bigTitle.classList.add('on', 'flick');
+  setTimeout(function(){ bigTitle.classList.remove('flick'); }, 700);
+}
+
+function triggerGlitch(dur){
+  glitchOv.classList.add('on');
+  setTimeout(function(){ glitchOv.classList.remove('on'); }, dur || 400);
+}
+
+function trackingBar(){
+  const bar = document.createElement('div');
+  bar.className = 'trackBar';
+  bar.style.top = (Math.random() * 100) + '%';
+  bar.style.height = (2 + Math.random() * 9) + 'px';
+  bar.style.opacity = (0.2 + Math.random() * 0.45).toFixed(2);
+  screenEl.appendChild(bar);
+  setTimeout(function(){ bar.remove(); }, 420);
+}
+
+let clockTimer = null;
+function startClock(){
+  const t0 = Date.now();
+  clockTimer = setInterval(function(){
+    const s = Math.floor((Date.now() - t0) / 1000);
+    const p = function(n){ return String(n).padStart(2, '0'); };
+    clockEl.textContent = p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60);
+  }, 250);
+}
+
+/* ═══════════ 播报单条台词 ═══════════ */
+function runItem(item, stage){
+  if (!item) return;
+  const voice = stage && stage.voice ? stage.voice : null;
+  if (item.type === 'title'){
+    setTitle(item.text);
+    if (item.speak) speak(item.speak, voice);
+  } else if (item.type === 'line'){
+    if (item.text){
+      appendLine(item.text, item.warn);
+      if (item.speak) speak(item.speak, voice);
+    }
+  }
+}
+
+/* ═══════════ 进入阶段 ═══════════ */
+function beginStage(stage){
+  if (ttsSupported) speechSynthesis.cancel();
+  stopHeartbeat();
+  triggerGlitch(280); noiseBurst(0.2, 0.055); beep(180, 0.14, 0.035, 'sawtooth');
+  clearLines();
+  setTitle(stage.title);
+  showCube(stage.id);
+
+  if (stage.id === 'standard'){
+    setTone({ oscs: [{ freq: 55, type: 'sine' }], gain: 0.04 });
+  } else if (stage.id === 'broken'){
+    setTone({ oscs: [{ freq: 48, type: 'sine' }, { freq: 72, type: 'triangle' }], gain: 0.05 });
+  } else if (stage.id === 'organ'){
+    setTone({ oscs: [{ freq: 38, type: 'sine' }, { freq: 57, type: 'sine' }], gain: 0.045 });
+    setTimeout(startHeartbeat, 600);
+  } else if (stage.id === 'nail'){
+    setTone({ oscs: [{ freq: 33, type: 'sawtooth' }, { freq: 49, type: 'sine' }], gain: 0.05 });
+  }
+}
+
+/* ═══════════ 主时间线 ═══════════ */
+let started = false;
+
+function beginSequence(){
+  startClock();
+  at(0.0, function(){ beep(660, 0.12, 0.04, 'sine'); rampDrone(0.05, 3); });
+  let cursor = 0.6;
+
+  currentScript.intro.forEach(function(item){
+    at(cursor, function(){ setTitle(item.text); if (item.speak) speak(item.speak, { rate: 0.85, pitch: 1.0 }); });
+    cursor += item.duration;
+  });
+
+  currentScript.stages.forEach(function(stage){
+    at(cursor, function(){ beginStage(stage); });
+    cursor += 1.6;
+    stage.lines.forEach(function(line){
+      at(cursor, function(){ if (line.text){ appendLine(line.text, line.warn); if (line.speak) speak(line.speak, stage.voice); } });
+      cursor += line.duration;
+    });
+  });
+
+  currentScript.outro.forEach(function(item){
+    at(cursor, function(){ setTitle(item.text); if (item.speak) speak(item.speak, { rate: 0.65, pitch: 0.5 }); });
+    cursor += item.duration;
+  });
+
+  const endTime = cursor;
+  at(endTime, function(){
+    if (ttsSupported) speechSynthesis.cancel();
+    stopHeartbeat();
+    bigTitle.classList.remove('on');
+    clearLines();
+    setTone(null);
+    rampDrone(0.0001, 1.5);
+    let n = noiseLevel;
+    const iv = setInterval(function(){ n *= 0.95; noiseLevel = n; if (n < 0.01) clearInterval(iv); }, 100);
+  });
+
+  at(endTime + currentScript.tailBeforeRestart, function(){
+    restartBtn.classList.add('show');
+    document.title = UI_TEXTS[currentLang].title;
+  });
+
+  (function scheduleGlitch(){
+    const delay = 2200 + Math.random() * 4500;
+    timers.push(setTimeout(function(){ if (started) trackingBar(); scheduleGlitch(); }, delay));
+  })();
+}
+
+/* ═══════════ 语言切换与 UI 更新 ═══════════ */
+function updateUILang(){
+  document.documentElement.lang = currentLang;
+  document.title = UI_TEXTS[currentLang].title;
+  document.getElementById('ssTitle').innerText = UI_TEXTS[currentLang].ssTitle;
+  document.getElementById('startBtn').innerText = UI_TEXTS[currentLang].startBtn;
+  document.getElementById('ssWarn').innerHTML = UI_TEXTS[currentLang].ssWarn;
+  document.getElementById('topBarText').innerText = UI_TEXTS[currentLang].topBar;
+  document.getElementById('topBarSub').innerText = UI_TEXTS[currentLang].topBarSub;
+  document.getElementById('botBarSub').innerText = UI_TEXTS[currentLang].botBarSub;
+  document.getElementById('restartBtn').innerText = UI_TEXTS[currentLang].restartBtn;
+  currentScript = currentLang === 'en' ? SCRIPT_EN : SCRIPT_ZH;
+  pickVoice();
+}
+
+langBtn.addEventListener('click', () => {
+  if (started) return;
+  currentLang = currentLang === 'en' ? 'zh' : 'en';
+  updateUILang();
+});
+updateUILang();
+
+/* ═══════════ 启动 ═══════════ */
+function start(){
+  if (started) return;
+  started = true;
+  langBtn.style.display = 'none';
+  initAudio();
+  if (ttsSupported) pickVoice();
+  startScr.style.transition = 'none';
+  startScr.classList.add('gone');
+
+  const blackout = document.createElement('div');
+  blackout.style.cssText = 'position:fixed;inset:0;background:#000;z-index:300;';
+  document.body.appendChild(blackout);
+
+  setTimeout(function(){
+    blackout.remove();
+    document.title = UI_TEXTS[currentLang].title;
+    beginSequence();
+  }, 1000);
+}
+
+startBtn.addEventListener('click', start);
+window.addEventListener('keydown', e => { if (!started && (e.key === 'Enter' || e.key === ' ')) start(); });
+restartBtn.addEventListener('click', () => {
+  if (ttsSupported) speechSynthesis.cancel();
+  stopHeartbeat();
+  location.reload();
+});
+
+})();
+</script>
+</body>
+</html>
