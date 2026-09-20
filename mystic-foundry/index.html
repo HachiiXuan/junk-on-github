@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>魔法工坊 · Arcane Foundry</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+
+<!-- ==================== 左侧合成面板 ==================== -->
+<aside id="panel">
+  <header class="brand">
+    <h1>魔 法 工 坊</h1>
+    <p>ARCANE FOUNDRY</p>
+  </header>
+
+  <section class="sec">
+    <label>复杂度 <span class="hint">法阵槽位数</span></label>
+    <div class="row complexity" id="complexityRow"></div>
+  </section>
+
+  <section class="sec">
+    <label>法术核心 <span class="hint">必选 1 个 · 决定全局</span></label>
+    <div class="row cores" id="coreRow"></div>
+  </section>
+
+  <section class="sec">
+    <label>释放方式 <span class="hint">可重复 · 决定伤害形式</span></label>
+    <div class="row methods" id="methodRow"></div>
+  </section>
+
+  <section class="sec">
+    <label>法阵 <span class="hint">点击槽位可移除</span></label>
+    <div class="slots" id="slotRow"></div>
+  </section>
+
+  <div class="actions">
+    <button id="craftBtn" disabled>✦ 合 成 ✦</button>
+    <button id="randomBtn" title="随机生成一套法术">🎲</button>
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div class="actions2">
+    <button id="helpBtn">组合法则</button>
+    <button id="clearBtn">清空法阵</button>
+  </div>
+
+  <label class="auto">
+    <input type="checkbox" id="autoChk" checked>
+    <span>填满后自动刻印</span>
+  </label>
+</aside>
+
+<!-- ==================== 场景 HUD ==================== -->
+<div id="hud">
+  <div id="spellName" class="empty">未 刻 印</div>
+  <div id="spellTags">在左侧面板合成一道法术</div>
+</div>
+
+<div id="stats">
+  <div>本次伤害 <b id="statDmg">0</b></div>
+  <div>峰值伤害 <b id="statPeak">0</b></div>
+  <div class="sep"></div>
+  <div>击倒 <b id="statKills">0</b></div>
+  <div>存活 <b id="statAlive">0</b></div>
+  <div>施法次数 <b id="statCasts">0</b></div>
+  <div>FPS <b id="statFps">60</b></div>
+</div>
+
+<div id="hint"><b>左键</b> 施法 · <b>空格+拖动</b> 旋转视角 · 先在左侧合成一道法术</div>
+
+<div id="reticle">
+  <div class="cd"></div>
+  <div class="ring"></div>
+  <div class="dot"></div>
+</div>
+
+<div id="dmgLayer"></div>
+<div id="toast"></div>
+
+<!-- ==================== 组合法则 ==================== -->
+<div id="help" class="hidden">
+  <div class="help-box">
+    <div id="helpBody"></div>
+    <button class="help-close" id="helpClose">关 闭</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
