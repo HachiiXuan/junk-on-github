@@ -1,8 +1,8 @@
 {
   "name": { "en": "Mystic Foundry", "zh": "秘法熔炉" },
   "desc": {
-    "en": "A Three.js magic sandbox: combine cores, cast spells, tune bloom and effects in a live settings panel.",
-    "zh": "Three.js 魔法沙盒：组合法术核心、施放法术，并实时调整泛光与特效参数。"
+    "en": "A magic sandbox where you combine spells via a menu to attack the wizards on the ground.",
+    "zh": "魔法沙盒，通过菜单组合法术，打击地面上的魔法师们"
   },
   "tags": ["Three.js", "WebGL", "Sandbox"],
   "category": "game",
