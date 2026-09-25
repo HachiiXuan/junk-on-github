@@ -1,0 +1,10 @@
+{
+  "name": { "en": "Analog Horror — Tornado", "zh": "模拟恐怖 · 龙卷风" },
+  "desc": {
+    "en": "A simulation of an emergency broadcast system warning about a tornado. Warning: contains flashing imagery and voice narration.",
+    "zh": "模拟紧急广播系统发布的龙卷风警报。（含频闪画面与语音播报）"
+  },
+  "tags": ["Analog Horror", "WebGL", "Interactive"],
+  "category": "game",
+  "order": 2
+}

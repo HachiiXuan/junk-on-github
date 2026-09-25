@@ -240,6 +240,12 @@ h1 .grad{
   text-transform:uppercase;color:#04121a;background:#67e8f9;
   border-radius:999px;padding:.16rem .5rem;box-shadow:0 3px 12px -3px rgba(103,232,249,.9);
 }
+/* project has no project.json: title/description were guessed from its own page */
+.badge-auto{
+  color:#f5f3ff;background:rgba(24,18,42,.72);
+  border:1px solid rgba(196,181,253,.45);backdrop-filter:blur(6px);
+  box-shadow:none;font-weight:600;
+}
 
 .card-body{padding:.95rem 1.05rem 1.1rem;display:flex;flex-direction:column;gap:.5rem;flex:1 1 auto}
 .card-title{margin:0;font-size:1.04rem;font-weight:660;letter-spacing:-.012em;line-height:1.35}
@@ -505,14 +511,15 @@ footer a:hover{color:var(--text)}
       emptyTitle: "No matches",
       emptyBody: "Nothing matches “{q}” here. Try another word or clear the search.",
       emptyAllTitle: "Nothing here yet",
-      emptyAllBody: "Push a folder that contains an index.html into the repository root and it will show up on this page.",
-      noteLive: "<b>Auto-detected.</b> This list is read live from the <code>{repo}</code> repository: every root folder containing an <code>index.html</code> becomes a card, so new uploads appear on their own. Names and descriptions come from the fallback list inside this HTML; projects that are not in it get theirs from their own page, and you can edit that list to set your own names, descriptions, colours and order. Whenever GitHub cannot be reached, the built-in list is used instead.",
+      emptyAllBody: "Push a folder that contains an index.html into the repository root and it will show up on this page. Add a project.json inside it to control its title, description, tags and category.",
+      noteLive: "<b>Auto-detected.</b> Folders are read live from the <code>{repo}</code> repository: every root folder containing an <code>index.html</code> becomes a card. Each card's title, description, tags and category come from that project's own <code>project.json</code>; if there is none, this page falls back to its <code>README.md</code>, then to its <code>&lt;title&gt;</code> / <code>meta description</code>. A card marked <b>auto</b> has no <code>project.json</code> yet, so its text was guessed from its own page. If GitHub cannot be reached, the built-in list is used instead.",
       noteCached: "<b>Auto-detected (cached).</b> This list was read from the <code>{repo}</code> repository a few minutes ago and is being reused to stay under GitHub's rate limit. Hit <code>refresh</code> to scan again.",
       noteOffline: "<b>Showing the built-in list.</b> GitHub could not be reached from this browser (offline, blocked, or rate-limited), so the page is using the project list embedded in it. All links still work.",
       footMade: "Junk on GitHub — a personal dumping ground.",
       footReadme: "Readme (my index)",
       footSource: "Source & games",
       newBadge: "new",
+      autoBadge: "auto",
       host: "github.io"
     },
     zh: {
@@ -545,14 +552,15 @@ footer a:hover{color:var(--text)}
       emptyTitle: "没有匹配的项目",
       emptyBody: "这里没有和“{q}”匹配的内容。换个词，或者清空搜索。",
       emptyAllTitle: "这里还什么都没有",
-      emptyAllBody: "往仓库根目录推一个含 index.html 的文件夹，它就会自动出现在这个页面上。",
-      noteLive: "<b>自动检测。</b>这份列表是实时从 <code>{repo}</code> 仓库读取的：凡是根目录下含有 <code>index.html</code> 的文件夹都会变成一张卡片，所以你新上传的项目会自己出现。名称和简介取自本页面内置的列表；不在列表里的新项目则读取它自己页面的信息。你可以直接编辑那份列表，自定义名称、简介、配色和排序。连不上 GitHub 时，页面会改用内置列表。",
+      emptyAllBody: "往仓库根目录推一个含 index.html 的文件夹，它就会自动出现在这个页面上。在文件夹里放一个 project.json，就能自己控制标题、简介、标签和分类。",
+      noteLive: "<b>自动检测。</b>文件夹是实时从 <code>{repo}</code> 仓库读取的：根目录下每个含 <code>index.html</code> 的文件夹都会变成一张卡片。卡片的标题、简介、标签和分类来自该项目自己的 <code>project.json</code>；没有这个文件时，依次回退到它的 <code>README.md</code>，再回退到它页面的 <code>&lt;title&gt;</code> / <code>meta description</code>。带 <b>auto</b> 角标的卡片还没有 <code>project.json</code>，文字是从它自己页面猜的。连不上 GitHub 时改用内置列表。",
       noteCached: "<b>自动检测（缓存）。</b>这份列表是几分钟前从 <code>{repo}</code> 仓库读取的，为了不超过 GitHub 的请求频率限制而直接复用。点 <code>刷新</code> 可以重新扫描。",
       noteOffline: "<b>当前显示内置列表。</b>这个浏览器连不上 GitHub（离线、被拦截或触发限流），所以页面用了内置的项目列表。所有链接依然可用。",
       footMade: "Junk on GitHub — 一个私人垃圾场。",
       footReadme: "README（我的原版索引）",
       footSource: "源码与游戏",
       newBadge: "新",
+      autoBadge: "auto",
       host: "github.io"
     }
   };
@@ -692,26 +700,160 @@ footer a:hover{color:var(--text)}
     return out;
   }
 
-  /* Best-effort per-project metadata; never blocks rendering for long. */
-  function enrich(dir) {
-    var url = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH + "/" + dir + "/index.html";
-    return fetchWithTimeout(url, META_TIMEOUT)
-      .then(function (res) { return res.text(); })
-      .then(function (html) {
-        var out = {};
-        var t = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-        if (t && t[1]) out.pageTitle = clean(t[1]);
-        var m = html.match(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)["']/i)
-             || html.match(/<meta[^>]+content=["']([^"']*)["'][^>]*name=["']description["']/i);
-        if (m && m[1]) out.pageDesc = clean(m[1]);
-        var o = html.match(/<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']*)["']/i);
-        if (o && o[1]) out.pageTitle = clean(o[1]);
-        var od = html.match(/<meta[^>]+property=["']og:description["'][^>]*content=["']([^"']*)["']/i);
-        if (od && od[1]) out.pageDesc = clean(od[1]);
-        return out;
-      })
-      .catch(function () { return {}; });
+  /* ==========================================================================
+     PER-PROJECT METADATA
+     For every project folder this page tries, in order:
+       1. <dir>/project.json   <- the file you are meant to maintain
+       2. <dir>/README.md      <- loose fallback, parsed as markdown
+       3. <dir>/index.html     <- <title> / <meta name="description">
+     Whatever it finds wins over the built-in list below, so new projects
+     describe themselves and this file never needs editing again.
+     ========================================================================== */
+  function fetchText(url) {
+    // cache: "no-store" matters here — without it the browser may serve an old
+    // project.json after you edit and push it
+    var ctrl = ("AbortController" in window) ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, META_TIMEOUT);
+    var opts = { cache: "no-store" };
+    if (ctrl) opts.signal = ctrl.signal;
+    return fetch(url, opts).then(function (res) {
+      clearTimeout(timer);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.text();
+    }, function (err) { clearTimeout(timer); throw err; });
   }
+
+  function readMeta(dir) {
+    var base = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH + "/" + dir + "/";
+    // tried in order and stopped at the first source that yields anything, so a
+    // fully documented project costs one request and an undocumented one costs three
+    return fetchText(base + "project.json")
+      .then(function (txt) {
+        var j = parseProjectJson(txt);
+        if (j) { j.source = "json"; return j; }
+        throw new Error("no project.json");
+      })
+      .catch(function () {
+        return fetchText(base + "README.md").then(function (txt) {
+          var m = parseReadme(txt);
+          if (m && (m.name || m.desc)) { m.source = "readme"; return m; }
+          throw new Error("no usable README");
+        });
+      })
+      .catch(function () {
+        return fetchText(base + "index.html").then(function (html) {
+          var p = parsePage(html) || {};
+          p.source = "auto";
+          return p;
+        });
+      })
+      .catch(function () { return { source: "auto" }; });
+  }
+
+  function parseProjectJson(txt) {
+    try {
+      var o = JSON.parse(txt);
+      if (!o || typeof o !== "object") return null;
+      return normalise(o);
+    } catch (e) { return null; }
+  }
+
+  function normalise(o) {
+    var out = { tags: [], kind: "", c1: "", c2: "", order: null, hidden: !!o.hidden };
+    // names/descriptions are kept bilingual when given as { en, zh }
+    out.name = asBilingual(o.name) || asBilingual(o.title);
+    out.desc = asBilingual(o.desc) || asBilingual(o.description);
+    if (Object.prototype.toString.call(o.tags) === "[object Array]") {
+      out.tags = o.tags.map(function (t) { return clean(t); }).filter(Boolean);
+    }
+    if (typeof o.kind === "string") out.kind = o.kind.trim().toLowerCase();
+    if (typeof o.category === "string") out.kind = o.category.trim().toLowerCase();
+    if (typeof o.color === "string") out.c1 = o.color.trim();
+    if (typeof o.color2 === "string") out.c2 = o.color2.trim();
+    if (Object.prototype.toString.call(o.color) === "[object Array]" && o.color.length >= 2) {
+      out.c1 = String(o.color[0]); out.c2 = String(o.color[1]);
+    }
+    if (o.order != null && isFinite(Number(o.order))) out.order = Number(o.order);
+    // ignore anything that is not an http(s) link, so a bad value cannot inject javascript:
+    if (typeof o.url === "string" && /^https?:\/\//i.test(o.url.trim())) out.url = o.url.trim();
+    return out;
+  }
+
+  /* "text" -> { en: "text", zh: "text" } ; { en, zh } -> cleaned copy */
+  function asBilingual(v) {
+    if (v == null) return null;
+    if (typeof v === "string") { var s = clean(v); return s ? { en: s, zh: s } : null; }
+    if (typeof v !== "object") return null;
+    var out = {};
+    Object.keys(v).forEach(function (k) {
+      var s = clean(v[k]);
+      if (s) out[k.toLowerCase()] = s;
+    });
+    return Object.keys(out).length ? out : null;
+  }
+
+  /* Best language match for a {en, zh, ...} object; falls back to en, then any. */
+  function pickLang(v) {
+    if (typeof v === "string") return clean(v);
+    if (!v || typeof v !== "object") return "";
+    if (lang === "zh") {
+      var keys = Object.keys(v);
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i].indexOf("zh") === 0 && v[keys[i]]) return clean(v[keys[i]]);
+      }
+    }
+    if (lang === "en" && v.en) return clean(v.en);
+    var k = Object.keys(v);
+    return clean(v.en || v[k[0]] || "");
+  }
+
+  function parseReadme(txt) {
+    var lines = String(txt).replace(/\r/g, "").split("\n");
+    var out = { name: null, desc: "", tags: [] };
+    var body = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      var h = line.match(/^#\s+(.*)$/);
+      if (h && !out.name) { out.name = clean(h[1]); continue; }
+      var t = line.match(/^(?:tags|标签)\s*[:：]\s*(.+)$/i);
+      if (t) { out.tags = t[1].split(/[,，]/).map(function (x) { return clean(x); }).filter(Boolean); continue; }
+      var k = line.match(/^(?:category|分类|kind)\s*[:：]\s*(.+)$/i);
+      if (k) { out.kind = clean(k[1]).toLowerCase(); continue; }
+      if (line) body.push(line);
+    }
+    out.desc = clean(body.slice(0, 2).join(" "));
+    return out;
+  }
+
+  function parsePage(html) {
+    var out = {};
+    var t = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (t && t[1]) out.pageTitle = clean(t[1]);
+    var o = html.match(/<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']*)["']/i);
+    if (o && o[1]) out.pageTitle = clean(o[1]);
+    var m = attr(html, "name", "description");
+    if (m) out.pageDesc = clean(m);
+    var od = attr(html, "property", "og:description");
+    if (od) out.pageDesc = clean(od);
+    return out;
+  }
+
+  /* Reads <meta name="description" content="..."> in either attribute order.
+     The content pattern accepts an escaped \" so a multi-line or quoted
+     description cannot silently truncate the value. */
+  function attr(html, key, value) {
+    var tagRe = /<meta\b[^>]*>/gi, tag;
+    while ((tag = tagRe.exec(html))) {
+      var t = tag[0];
+      if (!new RegExp(key + "\\s*=\\s*[\"']" + value + "[\"']", "i").test(t)) continue;
+      var c = t.match(/content\s*=\s*"((?:\\.|[^"\\])*)"/i) || t.match(/content\s*=\s*'((?:\\.|[^'\\])*)'/i);
+      // no content attribute -> fall back to the first quoted value after content=
+      if (!c) c = t.match(/content\s*=\s*([^"'\s>]+)/i);
+      if (c && c[1]) return c[1].replace(/\\(["'])/g, "$1");
+    }
+    return "";
+  }
+
   function clean(s) {
     return String(s)
       .replace(/<[^>]*>/g, " ")
@@ -752,7 +894,9 @@ footer a:hover{color:var(--text)}
     if (p.desc && p.desc[lang]) return p.desc[lang];
     if (p.desc && p.desc.en) return p.desc.en;
     if (p.pageDesc) return p.pageDesc;
-    if (p.isNew) return lang === "zh" ? "仓库里的新项目，还没有人工简介。" : "New in the repository — no hand-written description yet.";
+    if (p.isNew) return lang === "zh"
+      ? "新项目还没有 project.json，文字是读它自己的页面猜的。"
+      : "No project.json yet — this text was guessed from the project's own page.";
     return lang === "zh" ? "暂无简介。" : "No description yet.";
   }
   function prettyDir(dir) {
@@ -762,7 +906,7 @@ footer a:hover{color:var(--text)}
     var t = projectTitle(p).replace(/[^0-9A-Za-z\u4e00-\u9fa5]/g, "");
     return (t.charAt(0) || "?").toUpperCase();
   }
-  function hostOf(p) { return PAGES_BASE + p.dir + "/"; }
+  function hostOf(p) { return p.url || (PAGES_BASE + p.dir + "/"); }
   function searchBlob(p) {
     return [p.dir, p.pageTitle || "", p.pageDesc || "",
             (p.name && (p.name.en || "") + " " + (p.name.zh || "")) || "",
@@ -805,7 +949,8 @@ footer a:hover{color:var(--text)}
     var cover = el("div", "cover");
     cover.appendChild(el("span", "initial", initialOf(p)));
     cover.appendChild(el("span", "slug", p.dir));
-    if (p.isNew) cover.appendChild(el("span", "badge-new", T("newBadge")));
+    var badge = p.source === "auto" ? T("autoBadge") : (p.isNew ? T("newBadge") : (p.source === "readme" ? "" : ""));
+    if (badge) cover.appendChild(el("span", "badge-new" + (p.source === "auto" ? " badge-auto" : ""), badge));
     a.appendChild(cover);
 
     var body = el("div", "card-body");
@@ -998,10 +1143,54 @@ footer a:hover{color:var(--text)}
   ];
   function palette(i) { return PALETTE[i % PALETTE.length]; }
 
+  /* Take the lang-picked name/desc out of a per-project file and lay it over
+     whatever the built-in list had. Anything the file does not specify keeps
+     its built-in value, so a project.json may describe only what it wants to. */
+  function bilingual(value, fallback) {
+    if (!value) return fallback || null;
+    if (typeof value === "string") return { en: value, zh: value };
+    return value;
+  }
+
+  function applyMeta(list) {
+    var i, p, m;
+    for (i = 0; i < list.length; i++) {
+      p = list[i];
+      m = p.meta;
+      if (m) {
+        // per-project files win over the built-in values
+        if (m.name) p.name = bilingual(m.name, p.name);
+        if (m.desc) p.desc = bilingual(m.desc, p.desc);
+        if (m.tags && m.tags.length) p.tags = m.tags;
+        if (m.kind) p.kind = m.kind;
+        if (m.c1) p.c1 = m.c1;
+        if (m.c2) p.c2 = m.c2;
+        if (m.order != null) p.order = m.order;
+        if (m.url) p.url = m.url;
+        if (m.source === "json") p.isNew = false;   // described on purpose: not "undocumented"
+        p.source = m.source;
+        if (m.hidden) p.hidden = true;
+        if (m.pageTitle) p.pageTitle = m.pageTitle;
+        if (m.pageDesc) p.pageDesc = m.pageDesc;
+      }
+      delete p.meta;
+    }
+    // removal and reordering must produce a NEW array: the rendered cards from the
+    // first pass come from a slice of the old one and must not be mutated in place
+    list = list.filter(function (x) { return !x.hidden; });
+    list.sort(function (a, b) {
+      var oa = a.order == null ? 10000 : a.order;
+      var ob = b.order == null ? 10000 : b.order;
+      if (oa !== ob) return oa - ob;
+      return String(a.dir).localeCompare(String(b.dir));
+    });
+    return list;
+  }
+
   function apply(newList, status, stamp) {
-    state.list = newList;
-    state.status = status;
-    state.stamp = stamp || null;
+    if (newList) state.list = newList;
+    if (status) state.status = status;
+    state.stamp = stamp || state.stamp;
     renderFilters();
     renderGrid();
     renderSync();
@@ -1028,17 +1217,16 @@ footer a:hover{color:var(--text)}
         var dirs = toProjects(files);
         if (!dirs.length) throw new Error("no projects found in tree");
         var list = merge(dirs);
-        // enrich in the background, keep the built-in copy as instant fallback
-        var jobs = list.map(function (p) {
-          return enrich(p.dir).then(function (meta) {
-            p.pageTitle = meta.pageTitle || "";
-            p.pageDesc = meta.pageDesc || "";
-          });
-        });
-        apply(list, "live", Date.now());
+        // Render straight away from the built-in values, then let each project's
+        // own project.json / README.md / <title> refine its card as they arrive.
+        apply(list.slice(), "live", Date.now());
         writeCache(dirs);
+        var jobs = list.map(function (p) {
+          return readMeta(p.dir).then(function (meta) { p.meta = meta; });
+        });
         return Promise.all(jobs).then(function () {
-          renderGrid();
+          // applyMeta returns a NEW array (hidden entries dropped, order applied)
+          apply(applyMeta(list));
         });
       })
       .catch(function () {

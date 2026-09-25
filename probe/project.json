@@ -1,0 +1,10 @@
+{
+  "name": { "en": "Probe", "zh": "探针" },
+  "desc": {
+    "en": "Disguised as a remote upload of user device features, meant to prank non-tech-savvy friends. This webpage actually contains no remote connections.",
+    "zh": "伪装成用户设备特征被远程上传，用来对不懂技术的朋友进行恶作剧，该网页实际不含任何远程连接。"
+  },
+  "tags": ["Prank", "Canvas", "No network"],
+  "category": "game",
+  "order": 3
+}

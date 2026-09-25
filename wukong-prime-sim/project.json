@@ -1,0 +1,11 @@
+{
+  "name": { "en": "Wukong Prime Sim", "zh": "WukongPrime 模拟器" },
+  "desc": {
+    "en": "A gameplay in Warframe: endless waves, a boss, and settings for range, Steel Path and clone summoning. I love Warframe <3",
+    "zh": "在 Warframe 中的一个玩法：无尽刷怪、BOSS 战，可调攻击范围、钢铁之路与分身召唤。我爱 Warframe <3"
+  },
+  "tags": ["Warframe", "Canvas", "Boss"],
+  "category": "game",
+  "color": ["#f59e0b", "#ef4444"],
+  "order": 4
+}

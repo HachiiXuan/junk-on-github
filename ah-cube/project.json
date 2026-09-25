@@ -1,0 +1,11 @@
+{
+  "_comment": "一个项目的全部资料就写在这里。字段都可省略；name/desc 写 { en, zh } 就会跟着页面语言切换。",
+  "name": { "en": "Analog Horror — Cube", "zh": "模拟恐怖 · 方块" },
+  "desc": {
+    "en": "A mockumentary simulation observing a creature I saw in my dream.",
+    "zh": "模拟伪纪录片，观察我梦到的生物。"
+  },
+  "tags": ["Analog Horror", "Narration", "WebGL"],
+  "category": "game",
+  "order": 1
+}
