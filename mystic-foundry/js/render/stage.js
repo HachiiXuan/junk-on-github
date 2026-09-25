@@ -5,14 +5,13 @@ import { FX } from './fx.js';
 import { BloomComposer } from './bloom.js';
 import { skyTexture } from './textures.js';
 
-const PANEL_W = 336;
-
 export const Stage = {
   renderer: null,
   scene: null,
   camera: null,
   composer: null,
   keyLight: null,
+  panelVisible: true,
   groundPlane: new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
   _ray: new THREE.Raycaster(),
   _ndc: new THREE.Vector2(),
@@ -121,13 +120,15 @@ export const Stage = {
     });
 
     canvas.addEventListener('pointerdown', e => {
-      /* 只有「空格 + 左键」或「中键」进入旋转；右键完全不用 */
-      const isOrbit = (e.button === 0 && this.spaceHeld) || e.button === 1;
+      /* 桌面：空格 + 左键 或 中键 进入旋转（右键不参与，避开浏览器手势）
+         触摸：手指拖动即旋转，轻点则交给上层判定为施法 */
+      const isOrbit = (e.button === 0 && this.spaceHeld) || e.button === 1 || e.pointerType === 'touch';
       if (!isOrbit) return;
       this._dragging = true;
+      this.dragDist = 0;
       this._last.x = e.clientX; this._last.y = e.clientY;
       try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
-      canvas.style.cursor = 'grabbing';
+      if (e.pointerType !== 'touch') canvas.style.cursor = 'grabbing';
       e.preventDefault();
     });
 
@@ -136,6 +137,7 @@ export const Stage = {
       const dx = e.clientX - this._last.x;
       const dy = e.clientY - this._last.y;
       this._last.x = e.clientX; this._last.y = e.clientY;
+      this.dragDist = (this.dragDist || 0) + Math.hypot(dx, dy);
       const o = this._orbit;
       o.az -= dx * 0.0052;
       o.el = clamp(o.el + dy * 0.0038, CONFIG.camera.minEl, CONFIG.camera.maxEl);
@@ -144,7 +146,7 @@ export const Stage = {
     const end = e => {
       if (!this._dragging) return;
       this._dragging = false;
-      canvas.style.cursor = this.spaceHeld ? 'grab' : '';
+      if (e.pointerType !== 'touch') canvas.style.cursor = this.spaceHeld ? 'grab' : '';
       try { canvas.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     };
     canvas.addEventListener('pointerup', end);
@@ -161,14 +163,37 @@ export const Stage = {
     const w = innerWidth, h = innerHeight;
     const pr = Math.min(devicePixelRatio || 1, CONFIG.quality.maxPixelRatio);
     this.renderer.setPixelRatio(pr);
-    this.renderer.setSize(w, h, false);
+    /* 第三个参数必须为 true：<canvas> 是替换元素，CSS 只写 inset:0 的话它不会撑满视口，
+       而是用「内在尺寸」= width 属性 = CSS 尺寸 × DPR。于是 DPR>1 的屏幕上 canvas 被撑大，
+       3D 画面按 DPR 放大，而鼠标→NDC 的换算仍按视口算 → 法术落到鼠标右下方。 */
+    this.renderer.setSize(w, h, true);
 
     this.camera.aspect = w / h;
-    if (w > 900) this.camera.setViewOffset(w, h, -PANEL_W / 2, 0, w, h);
-    else this.camera.clearViewOffset();
+    this.updateViewOffset(w, h);
     this.camera.updateProjectionMatrix();
 
     this.composer.setSize(w, h, pr);
+  },
+
+  /** 面板遮住左侧，把 3D 视口中心平移到剩余区域的正中 */
+  updateViewOffset(w = innerWidth, h = innerHeight) {
+    if (!this.panelVisible || w <= 900) {
+      this.camera.clearViewOffset();
+      return;
+    }
+    let right = 350;
+    const el = document.getElementById('panel');
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0) right = r.right;
+    }
+    const shift = (right + w) / 2 - w / 2;
+    this.camera.setViewOffset(w, h, -shift, 0, w, h);
+  },
+
+  setPanelVisible(v) {
+    this.panelVisible = !!v;
+    this.resize();
   },
 
   updateCamera(dt, time) {

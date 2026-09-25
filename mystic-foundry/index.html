@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#07060f">
 <title>魔法工坊 · Arcane Foundry</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css">
@@ -14,65 +15,94 @@
 <!-- ==================== 左侧合成面板 ==================== -->
 <aside id="panel">
   <header class="brand">
-    <h1>魔 法 工 坊</h1>
-    <p>ARCANE FOUNDRY</p>
+    <h1 data-i18n="brand.title">ARCANE FOUNDRY</h1>
+    <p data-i18n="brand.sub">MAGIC WORKSHOP</p>
+    <div class="brand-tools">
+      <button id="soundBtn" class="tool" data-i18n-title="btn.sound">🔊</button>
+      <button id="langBtn" class="tool" data-i18n-title="btn.lang">中</button>
+      <button id="hidePanelBtn" class="tool" data-i18n-title="btn.hide">◀</button>
+    </div>
   </header>
 
-  <section class="sec">
-    <label>复杂度 <span class="hint">法阵槽位数</span></label>
+  <section class="sec" id="complexitySec">
+    <label><span data-i18n="sec.complexity">COMPLEXITY</span> <span class="hint" data-i18n="sec.complexityHint"></span></label>
     <div class="row complexity" id="complexityRow"></div>
   </section>
 
+  <section class="sec" id="overloadSec">
+    <label class="toggle" for="overloadChk">
+      <input type="checkbox" id="overloadChk">
+      <span class="tgl"></span>
+      <span class="tgl-text">
+        <b data-i18n="sec.overload">OVERLOAD CORE</b>
+        <i class="hint" data-i18n="sec.overloadHint"></i>
+      </span>
+    </label>
+  </section>
+
+  <section class="sec off" id="uncappedSec">
+    <label class="toggle danger" for="uncappedChk">
+      <input type="checkbox" id="uncappedChk">
+      <span class="tgl"></span>
+      <span class="tgl-text">
+        <b data-i18n="sec.uncapped">UNCAPPED</b>
+        <i class="hint" data-i18n="sec.uncappedHint"></i>
+      </span>
+    </label>
+  </section>
+
   <section class="sec">
-    <label>法术核心 <span class="hint">必选 1 个 · 决定全局</span></label>
+    <label><span data-i18n="sec.core">SPELL CORE</span> <span class="hint" data-i18n="sec.coreHint"></span></label>
     <div class="row cores" id="coreRow"></div>
   </section>
 
   <section class="sec">
-    <label>释放方式 <span class="hint">可重复 · 决定伤害形式</span></label>
+    <label><span data-i18n="sec.methods">RELEASE METHOD</span> <span class="hint" data-i18n="sec.methodsHint"></span></label>
     <div class="row methods" id="methodRow"></div>
   </section>
 
   <section class="sec">
-    <label>法阵 <span class="hint">点击槽位可移除</span></label>
+    <label><span data-i18n="sec.circle">MAGIC CIRCLE</span> <span class="hint" data-i18n="sec.circleHint"></span></label>
     <div class="slots" id="slotRow"></div>
   </section>
 
   <div class="actions">
-    <button id="craftBtn" disabled>✦ 合 成 ✦</button>
-    <button id="randomBtn" title="随机生成一套法术">🎲</button>
+    <button id="craftBtn" disabled>✦ INSCRIBE ✦</button>
+    <button id="randomBtn" data-i18n-title="btn.random">🎲</button>
   </div>
 
   <div class="result" id="result"></div>
 
   <div class="actions2">
-    <button id="helpBtn">组合法则</button>
-    <button id="clearBtn">清空法阵</button>
+    <button id="helpBtn" data-i18n="btn.help">Codex</button>
+    <button id="clearBtn" data-i18n="btn.clear">Clear circle</button>
   </div>
 
   <label class="auto">
     <input type="checkbox" id="autoChk" checked>
-    <span>填满后自动刻印</span>
+    <span data-i18n="chk.auto">Auto-inscribe when full</span>
   </label>
 </aside>
 
+<button id="showPanelBtn" class="hidden" data-i18n-title="btn.show">☰</button>
+
 <!-- ==================== 场景 HUD ==================== -->
 <div id="hud">
-  <div id="spellName" class="empty">未 刻 印</div>
-  <div id="spellTags">在左侧面板合成一道法术</div>
+  <div id="spellName" class="empty">NOT INSCRIBED</div>
+  <div id="spellTags">Forge a spell on the left panel</div>
 </div>
 
 <div id="stats">
-  <div>本次伤害 <b id="statDmg">0</b></div>
-  <div>峰值伤害 <b id="statPeak">0</b></div>
+  <div><span data-i18n="stats.castDmg">Cast damage</span> <b id="statDmg">0</b></div>
+  <div><span data-i18n="stats.peak">Peak</span> <b id="statPeak">0</b></div>
   <div class="sep"></div>
-  <div>击倒 <b id="statKills">0</b></div>
-  <div>存活 <b id="statAlive">0</b></div>
-  <div>施法次数 <b id="statCasts">0</b></div>
-  <div>FPS <b id="statFps">60</b></div>
+  <div><span data-i18n="stats.slain">Slain</span> <b id="statKills">0</b></div>
+  <div><span data-i18n="stats.alive">Alive</span> <b id="statAlive">0</b></div>
+  <div><span data-i18n="stats.casts">Casts</span> <b id="statCasts">0</b></div>
+  <div><span data-i18n="stats.fps">FPS</span> <b id="statFps">60</b></div>
 </div>
 
-<div id="hint"><b>左键</b> 施法 · <b>空格+拖动</b> 旋转视角 · 先在左侧合成一道法术</div>
+<div id="hint"><b>Left click</b> to cast · forge a spell first</div>
 
 <div id="reticle">
   <div class="cd"></div>
@@ -87,7 +117,7 @@
 <div id="help" class="hidden">
   <div class="help-box">
     <div id="helpBody"></div>
-    <button class="help-close" id="helpClose">关 闭</button>
+    <button class="help-close" id="helpClose" data-i18n="help.close">CLOSE</button>
   </div>
 </div>
 

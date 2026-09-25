@@ -3,10 +3,13 @@ import { clamp } from '../util.js';
 import { FX, flash, shockwave, airRing, burstSphere, sparks, chargeGather, castingFlare } from '../render/fx.js';
 import { Figures } from '../world/figures.js';
 import { Crystal } from '../world/crystal.js';
+import { Settings } from '../settings.js';
+import { Audio } from '../audio.js';
 import { CORE_FX, later, deliverOrbs, fireBeams, callMeteors, detonateBurst, arcChain,
   placeField, placeRunes, summonSatellites, scatterOrbs, radialBeams } from './effects.js';
 
 const MAX_DEPTH = 3;
+const MAX_DEPTH_BRUTE = 4;
 
 /**
  * 施法引擎
@@ -47,6 +50,10 @@ export const Engine = {
     const chargeTime = CONFIG.crystal.chargeTime + 0.05 * spell.complexity;
     this.cooldown = CONFIG.crystal.cooldown + 0.05 * spell.complexity;
 
+    /* 解除性能限制：放开派生预算、特效数上限与递归深度。
+       只在过载模式下生效（开关也只在过载模式里显示），普通模式行为不变。 */
+    const brute = Settings.uncapped && !!spell.overload;
+
     const ctx = {
       spell,
       core: spell.coreDef,
@@ -54,9 +61,14 @@ export const Engine = {
       colors: spell.colors,
       origin: Crystal.group.position,
       target: aim.clone(),
-      budget: 34 + 18 * spell.complexity,
+      maxDepth: brute ? MAX_DEPTH_BRUTE : MAX_DEPTH,
+      /* 派生预算：过载模式（最多 30 槽）会算出很大的复杂度，默认封顶保护帧率 */
+      budget: brute ? (34 + 18 * spell.complexity) : Math.min(150, 34 + 18 * spell.complexity),
       spent: 0,
       impacts: 0,
+      afterBudget: 0,     // 预算耗尽之后仍然结算的命中数
+      maxSpread: 0,
+      trace: [],
       stats: { hits: 0, kills: 0, damage: 0 },
       onHit: this.onDamage,
       onStats: this.onStats,
@@ -72,22 +84,27 @@ export const Engine = {
         return res;
       },
       spend(n = 1) {
-        if (this.budget < n) return false;
+        if (this.budget < n) { this.trace.push('no-budget'); return false; }
+        /* 画面里已有大量特效时停止继续派生（解除限制后不再拦） */
+        if (!brute && FX.count > 240) { this.trace.push('fx-limit'); return false; }
         this.budget -= n;
         this.spent += n;
         return true;
       },
-      impact(p, d, full = true) { impact(ctx, p, clamp(d | 0, 0, MAX_DEPTH), full); },
+      impact(p, d, full = true) { impact(ctx, p, clamp(d | 0, 0, ctx.maxDepth), full); },
     };
 
     Crystal.aimAt(aim);
     Crystal.startCharge(chargeTime);
     chargeGather(Crystal.group.position, spell.colors.core, 6.5, chargeTime, 30);
+    Audio.unlock();
+    Audio.charge(spell.core, chargeTime);
 
     this.lastCtx = ctx;   // 调试用
 
     later(chargeTime, () => {
       Crystal.fire();
+      Audio.fire(spell.core);
       castingFlare(Crystal.group.position, spell.colors.core, 2.4);
       dispatch(ctx, aim);
     });
@@ -104,6 +121,7 @@ export const Engine = {
 function dispatch(ctx, target) {
   const c = ctx.counts;
   let delivered = false;
+  ctx.trace.push('dispatch:' + JSON.stringify(c));
 
   /* ---- 铺场类：先在地面布下持续区域 ---- */
   if (c.field) { placeField(ctx, target, c.field); delivered = true; }
@@ -137,9 +155,17 @@ function dispatch(ctx, target) {
  * ============================================================ */
 
 function impact(ctx, point, depth, full) {
-  if (ctx.budget <= 0) return;
-  ctx.budget -= 1;
+  /* 预算只用来限制"继续派生"，绝不能拿来卡伤害与特效 ——
+     否则 29 个同方式瞬间吃光预算后，后半段落地的东西会全部变成空响。 */
+  const canSpawn = ctx.budget > 0;
+  if (canSpawn) ctx.budget -= 1;
+  else ctx.afterBudget += 1;
   ctx.impacts += 1;
+  /* 记录"主投送"命中点离锁定落点最远有多远（用于验证射线不会横扫场地） */
+  if (depth === 0) {
+    const spreadD = Math.hypot(point.x - ctx.target.x, point.z - ctx.target.z);
+    if (spreadD > (ctx.maxSpread || 0)) ctx.maxSpread = spreadD;
+  }
 
   const core = ctx.core;
   const radius = ctx.radiusAt(depth);
@@ -177,10 +203,12 @@ function impact(ctx, point, depth, full) {
     minFactor: 0.45,
   });
 
+  Audio.impact(core.key, radius);
+
   FX.shake((heavy ? 0.03 : 0.012) + Math.min(0.09, radius * 0.011));
 
   /* ---------------- 派生（只有「完整命中」才继续触发） ---------------- */
-  if (!full || depth > 1) return;
+  if (!full || depth > ctx.maxDepth - 2 || !canSpawn) return;
 
   const c = ctx.counts;
   const deep = depth === 0;      // 第一层派生保留全量，第二层减半

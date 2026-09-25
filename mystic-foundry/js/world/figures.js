@@ -2,6 +2,7 @@ import * as THREE from '../../lib/three.module.js';
 import { CONFIG } from '../config.js';
 import { rand, randInt, clamp, TAU, damp, mixHex, easeInQuad } from '../util.js';
 import { glowMat, sparks } from '../render/fx.js';
+import { Audio } from '../audio.js';
 
 const WHITE = new THREE.Color(0xffffff);
 const _paintColor = new THREE.Color();
@@ -61,13 +62,14 @@ let _faceTex = null;
  *  状态效果
  * ============================================================ */
 export const STATUS = {
-  burn: { name: '灼烧', color: 0xff6a2a, dps: 14, dur: 3.2, tint: 0xff5a1e },
-  wet: { name: '濡湿', color: 0x2fa8ff, slow: 0.45, dur: 4.5, tint: 0x2fa8ff, shockBonus: 1.3 },
-  root: { name: '禁锢', color: 0xc98a3c, immobile: true, dur: 1.2, tint: 0xc98a3c },
-  mark: { name: '圣印', color: 0xffe9a8, taken: 1.28, dur: 5, tint: 0xffe9a8 },
-  curse: { name: '诅咒', color: 0xa24bff, taken: 1.45, dur: 6, tint: 0xa24bff },
-  gust: { name: '卷扬', color: 0x5ef2c4, float: true, dur: 1.6, tint: 0x5ef2c4 },
-  shock: { name: '麻痹', color: 0x8fd4ff, immobile: true, taken: 1.15, dur: 1.0, tint: 0x8fd4ff },
+  burn: { name: { zh: '灼烧', en: 'Burning' }, color: 0xff6a2a, dps: 14, dur: 3.2, tint: 0xff5a1e },
+  wet: { name: { zh: '濡湿', en: 'Soaked' }, color: 0x2fa8ff, slow: 0.45, dur: 4.5, tint: 0x2fa8ff, shockBonus: 1.3 },
+  root: { name: { zh: '禁锢', en: 'Rooted' }, color: 0xc98a3c, immobile: true, dur: 1.2, tint: 0xc98a3c },
+  freeze: { name: { zh: '冻结', en: 'Frozen' }, color: 0x9fe8ff, immobile: true, taken: 1.30, slow: 0.35, dur: 1.8, tint: 0x9fe8ff },
+  mark: { name: { zh: '圣印', en: 'Branded' }, color: 0xffe9a8, taken: 1.28, dur: 5, tint: 0xffe9a8 },
+  curse: { name: { zh: '诅咒', en: 'Cursed' }, color: 0xa24bff, taken: 1.45, dur: 6, tint: 0xa24bff },
+  gust: { name: { zh: '卷扬', en: 'Afloat' }, color: 0x5ef2c4, float: true, dur: 1.6, tint: 0x5ef2c4 },
+  shock: { name: { zh: '麻痹', en: 'Stunned' }, color: 0x8fd4ff, immobile: true, taken: 1.15, dur: 1.0, tint: 0x8fd4ff },
 };
 
 /* ============================================================
@@ -401,6 +403,7 @@ export const Figures = {
     sparks(p, 24, mixHex(color, 0xffffff, 0.4), { speed: 7, up: 5, size: 0.17, life: 1.0, gravity: 9 });
     sparks(p, 12, f.robeMat.color.getHex(), { speed: 4, up: 3, size: 0.13, life: 0.9, gravity: 8 });
     this.kills++;
+    Audio.kill();
     f.bar.visible = false;
     f.statuses.clear();
     f.g.rotation.z = 0;

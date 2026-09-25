@@ -3,11 +3,16 @@ import { clamp, hex } from '../util.js';
 import { Engine } from '../magic/engine.js';
 import { CONFIG } from '../config.js';
 import { glowMat, RING_FLAT, DISC_FLAT } from '../render/fx.js';
+import { t } from '../i18n.js';
+import { coreName, coreTag } from '../magic/cores.js';
 
 const MAX_DMG = 56;
 
 export const Hud = {
   el: {},
+  /** 触摸设备：没有 hover 准星，轻点即为施法 */
+  isTouch: (typeof matchMedia === 'function' && matchMedia('(hover: none) and (pointer: coarse)').matches)
+    || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0),
   dmg: [],
   _cursor: { x: innerWidth / 2, y: innerHeight / 2 },
   _v: new THREE.Vector3(),
@@ -59,9 +64,10 @@ export const Hud = {
   setSpell(spell) {
     this.spell = spell;
     if (!spell) {
-      this.el.spellName.textContent = '未 刻 印';
+      this.el.spellName.textContent = t('hud.none');
       this.el.spellName.classList.add('empty');
-      this.el.spellTags.textContent = '在左侧面板合成一道法术';
+      this.el.spellName.style.color = '';
+      this.el.spellTags.textContent = t('hud.idleSub');
       this.preview.visible = false;
       return;
     }
@@ -69,7 +75,9 @@ export const Hud = {
     this.el.spellName.textContent = spell.name;
     this.el.spellName.classList.remove('empty');
     this.el.spellName.style.color = hex(c);
-    this.el.spellTags.textContent = `${spell.coreDef.name}核 · 复杂度 ${spell.complexity} · ${spell.coreDef.tag}`;
+    this.el.spellTags.textContent = spell.overload
+      ? t('hud.tagOverload', { core: coreName(spell.coreDef), used: spell.methods.length, tag: coreTag(spell.coreDef) })
+      : t('hud.tag', { core: coreName(spell.coreDef), n: spell.complexity, tag: coreTag(spell.coreDef) });
     this.preview.visible = true;
     for (const m of [this.previewRing, this.previewInner, this.previewDot]) m.material.color.setHex(c);
   },
@@ -111,7 +119,7 @@ export const Hud = {
     }
     const el = document.createElement('div');
     el.className = 'dmg' + (kind === 'kill' ? ' kill' : amount >= 55 ? ' crit' : '');
-    el.textContent = kind === 'kill' ? '✦ 击倒' : Math.round(amount);
+    el.textContent = kind === 'kill' ? t('dmg.kill') : Math.round(amount);
     const color = kind === 'kill' ? '#ffd166' : amount >= 55 ? '#ffb45c' : '#ffe9c0';
     el.style.color = color;
     this.el.dmgLayer.appendChild(el);

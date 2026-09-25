@@ -6,8 +6,17 @@ import {
 } from '../render/fx.js';
 import { runeTexture, meteorTexture } from '../render/textures.js';
 import { Figures } from '../world/figures.js';
+import { capOf } from './methods.js';
+import { Settings } from '../settings.js';
+import { Audio } from '../audio.js';
 
-const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
+/** 默认封顶；解除性能限制时按原值返回。
+ *  普通模式下每种方式最多 4 个、都低于各自上限，所以这里放开不会影响普通玩法。 */
+const capIf = (v, cap) => (Settings.uncapped ? v : Math.min(v, cap));
+
+/* 只在同步流程里使用的临时向量。任何会被延迟闭包读到的向量都必须各自 clone，
+   否则会被这期间运行的其它法术覆盖。 */
+const _a = new THREE.Vector3();
 
 /* ---------------------------------------------------------------- 工具 */
 
@@ -41,7 +50,6 @@ function launchProjectile(opts) {
 
   const scene = FX.scene;
   const g = new THREE.Group();
-
   const core = new THREE.Mesh(SPHERE_LO, glowMat(0xffffff, 1));
   core.scale.setScalar(size * 0.6);
   const halo = sprite(color, size * 7, 0.9, flareTex());
@@ -93,11 +101,16 @@ function launchProjectile(opts) {
 /* ---------------------------------------------------------------- 球体 */
 
 export function deliverOrbs(ctx, target, n) {
+  n = capOf('orb', n);
   const origin = ctx.origin;
   const core = ctx.core;
-  const spread = n > 1 ? 1.4 + n * 0.42 : 0;
-  const speed = 15 * core.speed * (1 + 0.05 * n);
-  const size = 0.26 + n * 0.05;
+  /* 层数越多，落点附近铺开的范围越大（有上限，免得丢到场地外面去）。
+     体积 / 弹速 / 弧度同样封一下，不然 29 颗会变成一坨巨型流星。 */
+  const spread = n > 1 ? Math.min(1.2 + n * 0.30, 6.0) : 0;
+  const speed = 15 * core.speed * (1 + 0.05 * Math.min(n, 12));
+  const size = 0.26 + Math.min(n, 10) * 0.05;
+  const arc = 3.0 + Math.min(n, 10) * 0.15;
+  const VOL = 2;   // 每次齐射 2 颗
 
   /* 为每颗球找一个不同的目标 */
   const pool = Figures.list
@@ -109,13 +122,12 @@ export function deliverOrbs(ctx, target, n) {
     const ang = (i / n) * TAU + rand(-0.3, 0.3);
     const tgt = target.clone().add(new THREE.Vector3(Math.cos(ang) * spread, 0, Math.sin(ang) * spread));
     const homing = pool[i % Math.max(1, pool.length)] || null;
-    later(i * 0.085, () => {
+    later(Math.floor(i / VOL) * 0.075 + (i % VOL) * 0.03, () => {
       launchProjectile({
         from: origin.clone(),
         to: tgt,
         color: ctx.colors.orb,
-        size, speed,
-        arc: 3.0 + n * 0.15,
+        size, speed, arc,
         homing: n >= 2 ? homing : null,
         onHit: p => {
           flash(p, ctx.colors.core, size * 4.5, 0.24);
@@ -130,25 +142,48 @@ export function deliverOrbs(ctx, target, n) {
 /* ---------------------------------------------------------------- 射线 */
 
 export function fireBeams(ctx, target, n) {
+  n = capOf('beam', n);
   const origin = ctx.origin;
-  const dir = _a.copy(target).sub(origin).setY(0).normalize();
-  const right = _b.set(-dir.z, 0, dir.x);
-  const width = (0.55 + 0.16 * n) * ctx.core.radius;
+  const core = ctx.core;
+  const PER_VOLLEY = 3;
+  const volleys = Math.max(1, Math.ceil(n / PER_VOLLEY));
+
+  /* 全部打向落点本身，只在落点周围散开：层数越多 → 覆盖范围越大 + 齐射轮次越多，
+     而不是排成一条横扫全场的扇形。
+     注意这里必须用独立的 Vector3：延迟发射的闭包是之后才读值的，
+     用模块级共享临时向量会被这期间其它法术覆盖（表现为后半段射线射歪/射没了）。 */
+  const flat = new THREE.Vector3(target.x - origin.x, 0, target.z - origin.z);
+  if (flat.lengthSq() < 1e-4) flat.set(0, 0, 1);   // 从正上方打时方向退化，兜底
+  flat.normalize();
+  const right = new THREE.Vector3(-flat.z, 0, flat.x);
+
+  const spread = volleys > 1 ? Math.min(0.7 + 0.22 * n, 6.5) : 0;
+  const width = (0.5 + 0.10 * Math.min(n, 12)) * core.radius;
   const dmg = ctx.damageAt(0) * 0.85;
+
+  /* 每一轮齐射一个落点，先算好（用的是新对象，不共享） */
+  const spots = [];
+  for (let v = 0; v < volleys; v++) {
+    const a = Math.random() * TAU;
+    const r = spread > 0 ? Math.sqrt(Math.random()) * spread : 0;
+    spots.push(target.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)));
+  }
 
   for (let i = 0; i < n; i++) {
     if (!ctx.spend()) break;
-    const off = (i - (n - 1) / 2) * (1.15 + 0.12 * n);
-    later(0.06 + i * 0.07, () => {
-      const from = origin.clone().addScaledVector(right, off * 0.3);
-      const to = target.clone().addScaledVector(right, off);
+    const volley = Math.floor(i / PER_VOLLEY);
+    const slot = i % PER_VOLLEY;
+    later(volley * 0.085 + slot * 0.02, () => {
+      const to = spots[volley].clone();
+      const from = origin.clone().addScaledVector(right, (slot - 1) * width * 1.1);
 
       /* 视觉：主光矛 + 细的伴生光线 */
-      beamFx(from, to, ctx.colors.beam, width * 0.32, 0.3);
-      if (n >= 3) {
-        const side = right.clone();
-        beamFx(from.clone().addScaledVector(side, -width * 0.5), to.clone().addScaledVector(side, -width * 0.9),
-          ctx.colors.core, width * 0.1, 0.22);
+      beamFx(from, to, ctx.colors.beam, width * 0.34, 0.3);
+      Audio.beam(core.key);
+      if (slot !== 1) {
+        beamFx(from.clone().addScaledVector(right, width * 0.4),
+          to.clone().addScaledVector(right, width * 0.7),
+          ctx.colors.core, width * 0.11, 0.22);
       }
 
       /* 贯穿：路径上的所有目标 */
@@ -198,19 +233,35 @@ function makeMeteor(size, color) {
 }
 
 export function callMeteors(ctx, target, waves, perWave, depth, spread = 3.6) {
+  waves = capOf('barrage', waves);
+  perWave = capIf(perWave, 4);
+  /* 散布半径必须封顶：层数一多，按线性算会散到 25 单位开外
+     （场地半径只有 15.5），陨星全砸在场地外面，表现就是"打到后半段没伤害"。 */
+  spread = Math.min(spread, 9.5);
   const color = ctx.colors.barrage;
-  const size = 0.32 + 0.06 * waves;
-  const dmg = ctx.damageAt(depth);
+  const size = 0.32 + 0.06 * Math.min(waves, 8);
 
-  for (let w = 0; w < waves; w++) {
-    for (let i = 0; i < perWave; i++) {
-      if (!ctx.spend()) return;
-      const p = target.clone().add(new THREE.Vector3(
-        rand(-spread, spread), 0, rand(-spread, spread),
-      ));
-      const startH = 19 + rand(0, 5);
-      later(0.12 + w * 0.26 + i * 0.06, () => {
+  /* 一次性把预算预约掉。
+     原来的写法是"延迟到落地前才 spend"，后半段的陨星要生成时预算早被前面的
+     命中派生吃光了，表现就是"前半段满天陨石、后半段不掉了"。 */
+  const want = waves * perWave;
+  let reserved = 0;
+  for (let k = 0; k < want; k++) {
+    if (!ctx.spend()) break;
+    reserved++;
+  }
+  if (reserved <= 0) return;
+
+  for (let idx = 0; idx < reserved; idx++) {
+    const w = Math.floor(idx / perWave);
+    const i = idx % perWave;
+    const p = target.clone().add(new THREE.Vector3(
+      rand(-spread, spread), 0, rand(-spread, spread),
+    ));
+    const startH = 19 + rand(0, 5);
+    later(0.12 + w * 0.26 + i * 0.06, () => {
         const { g, ring } = makeMeteor(size, color);
+        Audio.meteor(size);
         const start = p.clone().setY(startH);
         g.position.copy(start);
         FX.scene.add(g);
@@ -246,14 +297,14 @@ export function callMeteors(ctx, target, waves, perWave, depth, spread = 3.6) {
           }
           return false;
         });
-      });
-    }
+    });
   }
 }
 
 /* ---------------------------------------------------------------- 爆裂 */
 
 export function detonateBurst(ctx, point, count, depth) {
+  count = capOf('burst', count);
   const radius = ctx.radiusAt(depth);
   burstSphere(point, ctx.colors.core, radius * 0.62, 0.45);
   airRing(point.clone().setY(0.5), ctx.colors.burst, radius * 1.0, 0.42);
@@ -261,7 +312,7 @@ export function detonateBurst(ctx, point, count, depth) {
   FX.shake(0.05 * clamp(count, 1, 4) + 0.03);
 
   /* 连锁引爆：在爆心周围再炸 count-1 次 */
-  const chainN = Math.min(count - 1, 6);
+  const chainN = capIf(count - 1, 6);
   for (let i = 0; i < chainN; i++) {
     if (!ctx.spend()) return;
     const a = Math.random() * TAU;
@@ -281,22 +332,27 @@ function shocksFor(ctx, point, radius) {
 /* ---------------------------------------------------------------- 雷链 */
 
 export function arcChain(ctx, point, count, depth) {
+  count = capOf('chain', count);
   const color = ctx.colors.chain;
   const jumps = 1 + 2 * count + (ctx.core.key === 'thunder' ? 1 : 0);
   const maxDist = 6.5 + (count - 1) * 2.3;
   const dmg = ctx.damageAt(depth) * 0.55;
   const visited = new Set();
+  Audio.chain(jumps);
 
-  let cursor = _c.copy(point).setY(0.8);
+  let cursor = point.clone().setY(0.8);
   for (let i = 0; i < jumps; i++) {
     if (!ctx.spend()) break;
     const fig = Figures.nearest(cursor, maxDist, visited);
     if (!fig) break;
     visited.add(fig);
     const to = fig.g.position.clone().setY(0.8);
+    /* 每个电弧要有自己的起点：cursor 是会被下一轮改写的变量，
+       直接闭包引用的话所有电弧最后都从同一个点发出。 */
+    const src = cursor.clone();
 
     later(i * 0.06, () => {
-      lightning(cursor.clone(), to, color, { jag: 1.1, radius: 0.06 + count * 0.012, dur: 0.22, segments: 14 });
+      lightning(src, to, color, { jag: 1.1, radius: 0.06 + count * 0.012, dur: 0.22, segments: 14 });
       flash(to, mixHex(color, 0xffffff, 0.4), 1.1, 0.24);
       ctx.hurt(to, 1.9, dmg, {
         status: ctx.core.status, knock: 0.5, color, onHit: ctx.onHit,
@@ -310,6 +366,7 @@ export function arcChain(ctx, point, count, depth) {
 /* ---------------------------------------------------------------- 领域 */
 
 export function placeField(ctx, point, count) {
+  count = capOf('field', count);
   const core = ctx.core;
   const color = ctx.colors.field;
   /* 锁死落点：point 可能来自调用方的复用向量 */
@@ -347,6 +404,7 @@ export function placeField(ctx, point, count) {
   grp.add(rim);
 
   scene.add(grp);
+  Audio.field(core.key, dur);
 
   let t = 0, tick = interval, retract = 0;
   FX.add(dt => {
@@ -405,6 +463,7 @@ export function placeField(ctx, point, count) {
 /* ---------------------------------------------------------------- 环绕卫星 */
 
 export function summonSatellites(ctx, count) {
+  count = capOf('orbit', count);
   const color = ctx.colors.orbit;
   const dur = 5 + count * 1.1;
   const interval = 1.15 / (1 + 0.28 * (count - 1));
@@ -464,6 +523,7 @@ export function summonSatellites(ctx, count) {
         if (fig) {
           const to = fig.g.position.clone().setY(0.7);
           beamFx(s.g.position.clone(), to, color, 0.075, 0.2);
+          Audio.orbit();
           flash(to, color, 0.85, 0.2);
           ctx.hurt(to, 1.5, dmg, { status: ctx.core.status, knock: 0.3, color, onHit: ctx.onHit });
           sparks(to, 5, color, { speed: 4, up: 2, size: 0.1, life: 0.4, gravity: 6 });
@@ -477,6 +537,7 @@ export function summonSatellites(ctx, count) {
 /* ---------------------------------------------------------------- 符文 */
 
 export function placeRunes(ctx, point, count, depth) {
+  count = capOf('rune', count);
   const color = ctx.colors.rune;
   const core = ctx.core;
   const center = point.clone();          // 锁死落点
@@ -499,7 +560,9 @@ export function placeRunes(ctx, point, count, depth) {
     m.position.set(p.x, 0.07, p.z);
     m.scale.setScalar(radius * 0.55);
     scene.add(m);
-    runes.push({ m, p, t: 0, fuse: 0.5 + i * (0.34 - Math.min(0.18, count * 0.03)), done: false });
+    const fuse = 0.5 + i * (0.34 - Math.min(0.18, count * 0.03));
+    if (i < 3) Audio.rune(fuse);
+    runes.push({ m, p, t: 0, fuse, done: false });
   }
 
   if (!runes.length) return;
@@ -539,7 +602,9 @@ export function placeRunes(ctx, point, count, depth) {
 
 /** 命中后向四周散裂出光球（二次投送） */
 export function scatterOrbs(ctx, from, count, depth) {
-  const k = Math.min(count, 4);
+  const k = capIf(count, 4);
+  /* from 会被延迟闭包读到，先拷一份，避免被后续法术改写 */
+  const src = from.clone().setY(0.7);
   for (let i = 0; i < k; i++) {
     if (!ctx.spend()) return;
     const a = (i / k) * TAU + rand(-0.4, 0.4);
@@ -547,7 +612,7 @@ export function scatterOrbs(ctx, from, count, depth) {
     const p = from.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
     later(0.04 + i * 0.055, () => {
       launchProjectile({
-        from: from.clone().setY(0.7),
+        from: src.clone(),
         to: p,
         color: ctx.colors.orb,
         size: 0.22,
@@ -564,15 +629,16 @@ export function scatterOrbs(ctx, from, count, depth) {
 
 /** 命中后向四周迸出光矛 */
 export function radialBeams(ctx, point, count, depth) {
-  const k = Math.min(count + 1, 7);
+  const k = capIf(count + 1, 7);
   const dmg = ctx.damageAt(depth) * 0.5;
+  const center = point.clone();      // 同样先拷贝，闭包之后才读
   for (let i = 0; i < k; i++) {
     if (!ctx.spend()) return;
     const a = (i / k) * TAU + rand(-0.3, 0.3);
     const len = 3.4 + rand(0, 2.6);
-    const to = point.clone().add(new THREE.Vector3(Math.cos(a) * len, 0, Math.sin(a) * len));
+    const to = center.clone().add(new THREE.Vector3(Math.cos(a) * len, 0, Math.sin(a) * len));
     later(0.05 + i * 0.04, () => {
-      const from = point.clone().setY(0.6);
+      const from = center.clone().setY(0.6);
       beamFx(from, to, ctx.colors.beam, 0.075, 0.22);
       ctx.hurt(to, 1.6, dmg, {
         status: ctx.core.status, knock: 0.5, color: ctx.colors.beam, onHit: ctx.onHit,
@@ -585,6 +651,62 @@ export function radialBeams(ctx, point, count, depth) {
 /* ---------------------------------------------------------------- 核心特效 */
 
 export const CORE_FX = {
+  /** 冰：霜环 + 冰晶碎片向外迸射 */
+  ice(ctx, point, radius) {
+    const c = ctx.colors.core;
+    const grp = new THREE.Group();
+    const geo = new THREE.OctahedronGeometry(0.17, 0);
+    const mat = new THREE.MeshStandardMaterial({
+      color: c, emissive: c, emissiveIntensity: 2.0,
+      roughness: 0.15, metalness: 0.1, flatShading: true,
+      transparent: true, opacity: 0.95,
+    });
+    const shards = [];
+    const N = 8;
+    for (let i = 0; i < N; i++) {
+      const m = new THREE.Mesh(geo, mat);
+      const a = (i / N) * TAU + rand(-0.2, 0.2);
+      m.position.copy(point).setY(0.5);
+      m.scale.set(1, 1.6, 1);
+      m.userData = {
+        dir: new THREE.Vector3(Math.cos(a) * rand(0.8, 1.3), rand(0.7, 1.8), Math.sin(a) * rand(0.8, 1.3)),
+        spin: rand(4, 10),
+      };
+      grp.add(m);
+      shards.push(m);
+    }
+    FX.scene.add(grp);
+
+    const ring = new THREE.Mesh(DISC_FLAT, glowMat(c, 0.45));
+    ring.position.set(point.x, 0.09, point.z);
+    ring.scale.setScalar(radius * 0.5);
+    FX.scene.add(ring);
+
+    sparks(point, 18, 0xffffff, { speed: 7, up: 4, size: 0.13, life: 0.7, gravity: 11 });
+    sparks(point, 10, c, { speed: 4, up: 3, size: 0.16, life: 0.6, gravity: 6 });
+
+    let t = 0;
+    FX.add(dt => {
+      t += dt;
+      const k = clamp(t / 0.6, 0, 1);
+      if (k >= 1) { disposeMesh(grp); disposeMesh(ring); return true; }
+      for (let i = 0; i < shards.length; i++) {
+        const m = shards[i];
+        const d = m.userData.dir;
+        m.position.addScaledVector(d, dt * 7.5 * (1 - k * 0.65));
+        d.y -= dt * 5.5;
+        m.rotation.x += dt * m.userData.spin;
+        m.rotation.y += dt * m.userData.spin * 0.7;
+        m.scale.set(1 - k * 0.6, (1 - k * 0.6) * 1.6, 1 - k * 0.6);
+      }
+      mat.opacity = 0.95 * (1 - k);
+      ring.scale.setScalar(radius * (0.5 + k * 1.3));
+      ring.material.opacity = 0.45 * (1 - k);
+      ring.rotation.y += dt * 2.5;
+      return false;
+    });
+  },
+
   fire(ctx, point, radius) {
     const c = ctx.colors.core;
     const ring = new THREE.Mesh(DISC_FLAT, glowMat(c, 0.5));

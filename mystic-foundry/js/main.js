@@ -8,6 +8,9 @@ import { Figures } from './world/figures.js';
 import { Engine } from './magic/engine.js';
 import { Panel } from './ui/panel.js';
 import { Hud } from './ui/hud.js';
+import { t } from './i18n.js';
+import { Audio } from './audio.js';
+import { Settings } from './settings.js';
 
 /* ============================================================
  *  启动
@@ -47,7 +50,7 @@ function tryCast(cx, cy) {
     Hud.resetCastStats();
     alertFigures(p);
   } else if (res.reason === 'empty') {
-    Hud.toast('还没有刻印法术 —— 先在左侧合成一道');
+    Hud.toast(t('toast.noSpell'));
   }
 }
 
@@ -63,17 +66,47 @@ function alertFigures(point) {
   }
 }
 
+/* ------------------------------------------------------------------
+ *  输入
+ *   桌面：左键按下即施法（按住连发）；空格/中键拖动旋转视角
+ *   触摸：拖动旋转视角，轻点施法（按下时不打，抬手时看位移决定）
+ * ------------------------------------------------------------------ */
+let touchStart = null;
+
+/* 音频上下文必须在用户手势里创建 / 恢复（浏览器自动播放策略） */
+for (const ev of ['pointerdown', 'keydown']) {
+  addEventListener(ev, () => Audio.unlock(), { capture: true, passive: true });
+}
+
+function reticleAllowed() {
+  return !helpOpen() && !Stage.spaceHeld && !Hud.isTouch;
+}
+
 canvas.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch') {
+    touchStart = { x: e.clientX, y: e.clientY };
+    return;
+  }
   if (e.button !== 0) return;
   if (Stage.spaceHeld) return;          // 空格 + 左键 = 旋转视角，不施法
   holding = true;
   tryCast(e.clientX, e.clientY);
 });
 
-addEventListener('pointerup', () => { holding = false; });
-addEventListener('blur', () => { holding = false; });
+addEventListener('pointerup', e => {
+  holding = false;
+  if (touchStart && e.pointerType === 'touch') {
+    const moved = Math.hypot(e.clientX - touchStart.x, e.clientY - touchStart.y);
+    touchStart = null;
+    if (moved < 14 && !helpOpen()) tryCast(e.clientX, e.clientY);   // 轻点 = 施法
+  }
+});
+addEventListener('blur', () => { holding = false; touchStart = null; });
+addEventListener('pointercancel', () => { holding = false; touchStart = null; });
 
 canvas.addEventListener('pointermove', e => {
+  /* 拖动中不更新落点预览，免得视角旋转时预览乱跳 */
+  if (e.pointerType === 'touch' && Stage._dragging && Stage.dragDist > 14) return;
   const p = Stage.pickGround(e.clientX, e.clientY, tmp);
   if (!p) {
     Hud.setReticleVisible(false);
@@ -83,11 +116,12 @@ canvas.addEventListener('pointermove', e => {
   lastGround.copy(p);
   Crystal.aimAt(p);
   Hud.movePreview(p);
-  Hud.setReticleVisible(!helpOpen() && !Stage.spaceHeld);
+  if (e.pointerType === 'touch') Hud.preview.visible = true;
+  Hud.setReticleVisible(reticleAllowed());
 });
 
 canvas.addEventListener('pointerleave', () => Hud.setReticleVisible(false));
-canvas.addEventListener('pointerenter', () => { if (!helpOpen() && !Stage.spaceHeld) Hud.setReticleVisible(true); });
+canvas.addEventListener('pointerenter', () => { if (reticleAllowed()) Hud.setReticleVisible(true); });
 
 addEventListener('resize', () => Stage.resize());
 
@@ -124,4 +158,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 /* 调试钩子（headless 测试用） */
-window.__foundry = { Stage, Arena, Crystal, Figures, Engine, Panel, Hud, FX, CONFIG };
+window.__foundry = { Stage, Arena, Crystal, Figures, Engine, Panel, Hud, FX, CONFIG, Audio, Settings };
