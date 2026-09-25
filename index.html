@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Junk on GitHub — Project Index</title>
+<meta name="description" content="A single page that links to every playable project in HachiiXuan/junk-on-github.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+<style>
+/* ============================================================================
+   Junk on GitHub — project index page
+   Single self-contained file. No build step, no dependencies, no external CSS.
+   Edit the FALLBACK_PROJECTS array near the bottom to change names/descriptions.
+   ==========================================================================*/
+
+:root{
+  --bg:#07070c;
+  --bg-2:#0c0c15;
+  --panel:rgba(255,255,255,.045);
+  --panel-2:rgba(255,255,255,.075);
+  --line:rgba(255,255,255,.10);
+  --line-2:rgba(255,255,255,.18);
+  --text:#f2f3f8;
+  --muted:#9aa0b4;
+  --muted-2:#6f7488;
+  --accent:#8b5cf6;
+  --accent-2:#22d3ee;
+  --radius:18px;
+  --radius-s:11px;
+  --shadow:0 18px 50px -18px rgba(0,0,0,.85);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:16px;
+  line-height:1.6;
+  min-height:100vh;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* ambient background */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(60rem 40rem at 12% -8%, rgba(139,92,246,.20), transparent 62%),
+    radial-gradient(52rem 38rem at 88% 4%, rgba(34,211,238,.13), transparent 60%),
+    radial-gradient(48rem 34rem at 50% 108%, rgba(236,72,153,.11), transparent 60%);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.35;
+  background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+  background-size:68px 68px;
+  mask-image:radial-gradient(ellipse 100% 70% at 50% 0%,#000 15%,transparent 78%);
+  -webkit-mask-image:radial-gradient(ellipse 100% 70% at 50% 0%,#000 15%,transparent 78%);
+}
+
+.wrap{width:min(1180px,100% - 2.6rem);margin-inline:auto}
+
+/* ───────────────────────── top bar ───────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:40;
+  backdrop-filter:blur(16px) saturate(150%);
+  -webkit-backdrop-filter:blur(16px) saturate(150%);
+  background:rgba(7,7,12,.72);
+  border-bottom:1px solid var(--line);
+}
+.topbar-in{display:flex;align-items:center;gap:1rem;padding:.72rem 0}
+.brand{display:flex;align-items:center;gap:.62rem;text-decoration:none;color:inherit;min-width:0}
+.brand-mark{
+  width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;
+  font-family:var(--mono);font-weight:700;font-size:15px;color:#fff;
+  background:linear-gradient(140deg,var(--accent),#4f46e5 55%,var(--accent-2));
+  box-shadow:0 6px 18px -6px rgba(139,92,246,.85);
+}
+.brand-text{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.brand-text b{font-size:.95rem;font-weight:650;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand-text span{font-size:.7rem;color:var(--muted-2);font-family:var(--mono);letter-spacing:.04em}
+.topbar-spacer{flex:1 1 auto;min-width:.5rem}
+
+.gh-link{
+  display:inline-flex;align-items:center;gap:.45rem;
+  font-size:.82rem;color:var(--muted);text-decoration:none;
+  padding:.42rem .72rem;border:1px solid var(--line);border-radius:999px;
+  transition:color .18s,border-color .18s,background .18s;
+  white-space:nowrap;
+}
+.gh-link:hover{color:var(--text);border-color:var(--line-2);background:var(--panel)}
+.gh-link svg{width:15px;height:15px;fill:currentColor;flex:none}
+
+/* language switch */
+.lang{
+  display:inline-flex;position:relative;flex:none;
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px;
+}
+.lang button{
+  appearance:none;border:0;background:transparent;color:var(--muted);
+  font-family:inherit;font-size:.79rem;font-weight:600;letter-spacing:.02em;
+  padding:.3rem .68rem;border-radius:999px;cursor:pointer;transition:color .18s;
+  white-space:nowrap;
+}
+.lang button:hover{color:var(--text)}
+.lang button[aria-pressed="true"]{
+  color:#fff;background:linear-gradient(135deg,rgba(139,92,246,.95),rgba(34,211,238,.8));
+  box-shadow:0 4px 14px -5px rgba(139,92,246,.9);
+}
+
+/* ───────────────────────── hero ───────────────────────── */
+.hero{padding:3.6rem 0 2rem}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:.5rem;
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent-2);background:rgba(34,211,238,.07);
+  border:1px solid rgba(34,211,238,.22);border-radius:999px;padding:.32rem .78rem;
+}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent-2);box-shadow:0 0 10px var(--accent-2);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.28}}
+h1{
+  margin:1.05rem 0 0;font-size:clamp(2rem,5.2vw,3.35rem);line-height:1.08;
+  letter-spacing:-.032em;font-weight:720;
+}
+h1 .grad{
+  background:linear-gradient(100deg,#fff 8%,#c4b5fd 42%,#67e8f9 88%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.lede{margin:1rem 0 0;max-width:60ch;color:var(--muted);font-size:1.03rem}
+.hero-meta{
+  display:flex;flex-wrap:wrap;gap:.55rem 1.4rem;margin-top:1.5rem;
+  font-family:var(--mono);font-size:.76rem;color:var(--muted-2);
+}
+.hero-meta b{color:var(--text);font-weight:650}
+.hero-meta .sep{color:var(--line-2)}
+
+/* ───────────────────────── controls ───────────────────────── */
+.controls{
+  display:flex;flex-wrap:wrap;gap:.7rem;align-items:center;
+  margin:2rem 0 1.15rem;padding-bottom:1.15rem;border-bottom:1px solid var(--line);
+}
+.search{position:relative;flex:1 1 15rem;min-width:12rem;max-width:24rem}
+.search svg{
+  position:absolute;left:.8rem;top:50%;transform:translateY(-50%);
+  width:15px;height:15px;stroke:var(--muted-2);fill:none;stroke-width:2;pointer-events:none;
+}
+.search input{
+  width:100%;appearance:none;font-family:inherit;font-size:.88rem;color:var(--text);
+  background:var(--panel);border:1px solid var(--line);border-radius:999px;
+  padding:.55rem .95rem .55rem 2.3rem;transition:border-color .18s,background .18s;
+}
+.search input::placeholder{color:var(--muted-2)}
+.search input:focus{outline:none;border-color:rgba(139,92,246,.6);background:var(--panel-2)}
+.kbd{
+  font-family:var(--mono);font-size:.66rem;color:var(--muted-2);
+  border:1px solid var(--line);border-radius:5px;padding:.05rem .34rem;margin-left:.2rem;
+}
+
+.filters{display:flex;flex-wrap:wrap;gap:.42rem}
+.chip{
+  appearance:none;font-family:inherit;font-size:.79rem;font-weight:560;
+  color:var(--muted);background:var(--panel);border:1px solid var(--line);
+  border-radius:999px;padding:.36rem .78rem;cursor:pointer;
+  display:inline-flex;align-items:center;gap:.4rem;transition:all .16s;
+}
+.chip:hover{color:var(--text);border-color:var(--line-2)}
+.chip[aria-pressed="true"]{color:#fff;background:rgba(139,92,246,.28);border-color:rgba(139,92,246,.62)}
+.chip i{font-style:normal;font-family:var(--mono);font-size:.7rem;color:var(--muted-2)}
+.chip[aria-pressed="true"] i{color:rgba(255,255,255,.7)}
+
+.sync{
+  display:inline-flex;align-items:center;gap:.4rem;margin-left:auto;
+  font-family:var(--mono);font-size:.72rem;color:var(--muted-2);white-space:nowrap;
+}
+.sync .sdot{width:6px;height:6px;border-radius:50%;background:#34d399;flex:none;box-shadow:0 0 8px rgba(52,211,153,.9)}
+.sync[data-state="loading"] .sdot{background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.9);animation:pulse 1.1s linear infinite}
+.sync[data-state="offline"] .sdot{background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,.85)}
+.sync[data-state="error"] .sdot{background:#f87171;box-shadow:0 0 8px rgba(248,113,113,.85)}
+.sync button{
+  appearance:none;background:transparent;border:1px solid var(--line);color:var(--muted);
+  font-family:var(--mono);font-size:.68rem;border-radius:999px;padding:.1rem .5rem;cursor:pointer;
+}
+.sync button:hover{color:var(--text);border-color:var(--line-2)}
+
+/* ───────────────────────── grid ───────────────────────── */
+.grid{
+  display:grid;gap:1.15rem;padding-bottom:1rem;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+}
+.card{
+  position:relative;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  text-decoration:none;color:inherit;
+  transition:transform .22s cubic-bezier(.2,.7,.3,1),border-color .22s,box-shadow .22s,background .22s;
+  animation:rise .5s cubic-bezier(.2,.7,.3,1) both;
+}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.card:hover,.card:focus-visible{
+  transform:translateY(-5px);border-color:var(--line-2);background:var(--panel-2);
+  box-shadow:var(--shadow),0 0 0 1px rgba(255,255,255,.03) inset;
+  outline:none;
+}
+.card:focus-visible{box-shadow:0 0 0 2px var(--accent),var(--shadow)}
+
+.cover{
+  position:relative;height:132px;flex:none;overflow:hidden;
+  background:var(--g,linear-gradient(140deg,#4f46e5,#22d3ee));
+  display:grid;place-items:center;
+}
+.cover::after{
+  content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(0,0,0,.16) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,0,0,.16) 1px,transparent 1px);
+  background-size:22px 22px;opacity:.5;
+  mask-image:radial-gradient(ellipse at 50% 50%,#000 12%,transparent 76%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 50%,#000 12%,transparent 76%);
+}
+.cover::before{
+  content:"";position:absolute;inset:0;opacity:.5;mix-blend-mode:overlay;
+  background:radial-gradient(60% 80% at 22% 12%,rgba(255,255,255,.55),transparent 60%);
+}
+.initial{
+  position:relative;z-index:2;font-family:var(--mono);font-weight:800;
+  font-size:3.4rem;line-height:1;color:rgba(255,255,255,.95);
+  text-shadow:0 6px 26px rgba(0,0,0,.5);
+}
+.cover .slug{
+  position:absolute;left:.9rem;bottom:.62rem;z-index:2;
+  font-family:var(--mono);font-size:.67rem;letter-spacing:.06em;
+  color:rgba(255,255,255,.82);text-shadow:0 1px 6px rgba(0,0,0,.6);
+}
+.badge-new{
+  position:absolute;right:.7rem;top:.7rem;z-index:3;
+  font-family:var(--mono);font-size:.62rem;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:#04121a;background:#67e8f9;
+  border-radius:999px;padding:.16rem .5rem;box-shadow:0 3px 12px -3px rgba(103,232,249,.9);
+}
+
+.card-body{padding:.95rem 1.05rem 1.1rem;display:flex;flex-direction:column;gap:.5rem;flex:1 1 auto}
+.card-title{margin:0;font-size:1.04rem;font-weight:660;letter-spacing:-.012em;line-height:1.35}
+.card-desc{margin:0;font-size:.855rem;color:var(--muted);line-height:1.62;flex:1 1 auto}
+.card-foot{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.35rem}
+.tags{display:flex;flex-wrap:wrap;gap:.32rem}
+.tag{
+  font-family:var(--mono);font-size:.65rem;letter-spacing:.03em;
+  color:var(--muted-2);background:rgba(255,255,255,.05);
+  border:1px solid var(--line);border-radius:6px;padding:.1rem .42rem;
+}
+.play{
+  display:inline-flex;align-items:center;gap:.34rem;flex:none;
+  font-size:.8rem;font-weight:600;color:var(--text);
+  transition:gap .18s,color .18s;
+}
+.card:hover .play{gap:.55rem;color:var(--accent-2)}
+.play svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+
+/* skeleton */
+.card.skel{padding:0;pointer-events:none}
+.skel-cover{height:132px;background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,255,255,.12) 50%,rgba(255,255,255,.05) 70%);background-size:220% 100%;animation:shimmer 1.4s linear infinite}
+.skel-line{height:11px;border-radius:6px;margin:.95rem 1.05rem 0;background:linear-gradient(100deg,rgba(255,255,255,.05) 30%,rgba(255,255,255,.12) 50%,rgba(255,255,255,.05) 70%);background-size:220% 100%;animation:shimmer 1.4s linear infinite}
+.skel-line.w60{width:60%}.skel-line.w85{width:85%}.skel-line.last{margin-bottom:1.3rem}
+@keyframes shimmer{from{background-position:120% 0}to{background-position:-120% 0}}
+
+/* empty state */
+.empty{
+  grid-column:1/-1;text-align:center;padding:3.6rem 1.4rem;color:var(--muted);
+  border:1px dashed var(--line-2);border-radius:var(--radius);background:rgba(255,255,255,.02);
+}
+.empty b{display:block;color:var(--text);font-size:1.05rem;margin-bottom:.4rem}
+
+/* ───────────────────────── footnotes ───────────────────────── */
+.note{
+  margin-top:2.4rem;padding:1.05rem 1.15rem;border-radius:var(--radius-s);
+  background:rgba(255,255,255,.028);border:1px solid var(--line);
+  font-size:.8rem;color:var(--muted-2);line-height:1.7;
+}
+.note b{color:var(--muted);font-weight:620}
+.note code{font-family:var(--mono);font-size:.76rem;color:#c4b5fd;background:rgba(139,92,246,.12);border-radius:5px;padding:.06rem .34rem}
+
+footer{
+  margin-top:2.6rem;padding:1.6rem 0 2.6rem;border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:.7rem 1.2rem;align-items:center;justify-content:space-between;
+  font-size:.78rem;color:var(--muted-2);
+}
+footer a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--line-2)}
+footer a:hover{color:var(--text)}
+
+/* scroll to top */
+.totop{
+  position:fixed;right:1.1rem;bottom:1.1rem;z-index:50;
+  width:40px;height:40px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:rgba(12,12,21,.86);border:1px solid var(--line-2);color:var(--muted);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  opacity:0;pointer-events:none;transition:opacity .25s,color .2s;
+}
+.totop.show{opacity:1;pointer-events:auto}
+.totop:hover{color:var(--text)}
+.totop svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+@media (max-width:640px){
+  .wrap{width:min(1180px,100% - 1.6rem)}
+  .hero{padding:2.4rem 0 1.4rem}
+  .brand-text span{display:none}
+  .gh-link span{display:none}
+  .gh-link{padding:.42rem .55rem}
+  .sync{margin-left:0;width:100%}
+  .card-desc{-webkit-line-clamp:4}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#top" id="brand">
+      <span class="brand-mark">J</span>
+      <span class="brand-text">
+        <b>Junk on GitHub</b>
+        <span id="brandSub">project index</span>
+      </span>
+    </a>
+    <span class="topbar-spacer"></span>
+
+    <a class="gh-link" id="repoLink" href="https://github.com/HachiiXuan/junk-on-github" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      <span>Repository</span>
+    </a>
+
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="top">
+
+  <section class="hero">
+    <span class="eyebrow"><span class="dot"></span><span id="eyebrowText" data-i18n="eyebrow">auto-updating index</span></span>
+    <h1><span class="grad" data-i18n="h1">Everything I dumped on GitHub,</span><br><span data-i18n="h1b">in one page.</span></h1>
+    <p class="lede" data-i18n="lede">Small games and experiments, each hosted straight from the repository. Pick one and it opens right here in a new tab.</p>
+    <div class="hero-meta">
+      <span><b id="statCount">—</b> <span data-i18n="statProjects">projects</span></span>
+      <span class="sep">/</span>
+      <span><b id="statHost">github.io</b></span>
+      <span class="sep">/</span>
+      <span id="statStamp" data-i18n="statSyncing">syncing…</span>
+    </div>
+  </section>
+
+  <div class="controls">
+    <label class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search projects…" aria-label="Search projects">
+    </label>
+    <div class="filters" id="filters" role="group" aria-label="Filter"></div>
+    <div class="sync" id="sync" data-state="loading">
+      <span class="sdot"></span>
+      <span id="syncText" data-i18n="syncLoading">checking repository…</span>
+      <button type="button" id="resync"><span id="resyncLabel" data-i18n="syncRefresh">refresh</span></button>
+    </div>
+  </div>
+
+  <section class="grid" id="grid" aria-live="polite" aria-busy="true"></section>
+
+  <div class="note" id="note" role="status"></div>
+
+  <footer>
+    <span><span data-i18n="footMade">Junk on GitHub — a personal dumping ground.</span></span>
+    <span>
+      <a href="https://github.com/HachiiXuan" target="_blank" rel="noopener noreferrer">@HachiiXuan</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/HachiiXuan/junk-on-github#readme" target="_blank" rel="noopener noreferrer" data-i18n="footReadme">README</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/HachiiXuan/junk-on-github" target="_blank" rel="noopener noreferrer" data-i18n="footSource">Source &amp; games</a>
+    </span>
+  </footer>
+</main>
+
+<button class="totop" id="totop" type="button" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+</button>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ==========================================================================
+     1. CONFIG — change these two lines if you rename the repository
+     ========================================================================== */
+  var OWNER  = "HachiiXuan";
+  var REPO   = "junk-on-github";
+  var BRANCH = "main";          // branch GitHub Pages builds from
+  var SELF   = "";              // set to a folder name to hide it from the grid (this file lives in the repo root, so nothing to hide)
+
+  var PAGES_BASE = "https://" + OWNER.toLowerCase() + ".github.io/" + REPO + "/";
+  var GITHUB_URL = "https://github.com/" + OWNER + "/" + REPO;
+
+  var CACHE_KEY = "jog.index.cache.v1";
+  var CACHE_MS  = 10 * 60 * 1000;   // reuse a successful scan for 10 minutes
+  var API_TIMEOUT = 9000;
+  var META_TIMEOUT = 7000;
+
+  /* ==========================================================================
+     2. FALLBACK_PROJECTS
+        Used for names, descriptions, colours and ordering.
+        If the repository scan succeeds, any project that no longer exists on
+        GitHub is dropped; any new folder with an index.html is appended
+        automatically. So this list never has to be kept perfectly in sync.
+        `dir` must match the folder name in the repository.
+     ========================================================================== */
+  var FALLBACK_PROJECTS = [
+    {
+      dir: "ah-cube",
+      name: { en: "Analog Horror — Cube", zh: "模拟恐怖 · 方块" },
+      desc: {
+        en: "A mockumentary simulation observing a creature I saw in my dream.",
+        zh: "模拟伪纪录片，观察我梦到的生物。"
+      },
+      tags: ["Analog Horror", "Narration", "WebGL"],
+      kind: "game", c1: "#0ea5e9", c2: "#4f46e5"
+    },
+    {
+      dir: "ah-tornado",
+      name: { en: "Analog Horror — Tornado", zh: "模拟恐怖 · 龙卷风" },
+      desc: {
+        en: "A simulation of an emergency broadcast system warning about a tornado. Warning: contains flashing imagery and voice narration.",
+        zh: "模拟紧急广播系统发布的龙卷风警报。（含频闪画面与语音播报）"
+      },
+      tags: ["Analog Horror", "WebGL", "Interactive"],
+      kind: "game", c1: "#7c3aed", c2: "#ec4899"
+    },
+    {
+      dir: "probe",
+      name: { en: "Probe", zh: "探针" },
+      desc: {
+        en: "Disguised as a remote upload of user device features, meant to prank non-tech-savvy friends. This webpage actually contains no remote connections.",
+        zh: "伪装成用户设备特征被远程上传，用来对不懂技术的朋友进行恶作剧，该网页实际不含任何远程连接。"
+      },
+      tags: ["Prank", "Canvas", "No network"],
+      kind: "game", c1: "#22d3ee", c2: "#0d9488"
+    },
+    {
+      dir: "mystic-foundry",
+      name: { en: "Mystic Foundry", zh: "秘法熔炉" },
+      desc: {
+        en: "A Three.js magic sandbox: combine cores, cast spells, tune bloom and effects in a live settings panel.",
+        zh: "Three.js 魔法沙盒：组合法术核心、施放法术，并实时调整泛光与特效参数。"
+      },
+      tags: ["Three.js", "WebGL", "Sandbox"],
+      kind: "game", c1: "#8b5cf6", c2: "#3b82f6"
+    },
+    {
+      dir: "wukong-prime-sim",
+      name: { en: "Wukong Prime Sim", zh: "WukongPrime 模拟器" },
+      desc: {
+        en: "A gameplay in Warframe: endless waves, a boss, and settings for range, Steel Path and clone summoning. I love Warframe <3",
+        zh: "在 Warframe 中的一个玩法：无尽刷怪、BOSS 战，可调攻击范围、钢铁之路与分身召唤。我爱 Warframe <3"
+      },
+      tags: ["Warframe", "Canvas", "Boss"],
+      kind: "game", c1: "#f59e0b", c2: "#ef4444"
+    }
+  ];
+
+  /* ==========================================================================
+     3. UI STRINGS
+     ========================================================================== */
+  var STRINGS = {
+    en: {
+      htmlLang: "en",
+      title: "Junk on GitHub — Project Index",
+      brandSub: "project index",
+      eyebrow: "auto-updating index",
+      h1: "Everything I dumped on GitHub,",
+      h1b: "in one page.",
+      lede: "Boring projects generated by AI. If you ask me what they are for — nothing. That's it. They are hosted here so I can reach my junk anytime, anywhere.",
+      statProjects: "projects",
+      statSyncing: "syncing…",
+      statSynced: "synced {t}",
+      statOffline: "offline list",
+      statError: "scan failed",
+      search: "Search projects…",
+      searchAria: "Search projects",
+      filterAll: "All",
+      filterGame: "Games",
+      filterTool: "Experiments",
+      filterWebgl: "WebGL",
+      filterCanvas: "Canvas",
+      play: "Open",
+      syncLoading: "checking repository…",
+      syncLive: "live · {n} found",
+      syncCached: "cached · {n} found",
+      syncOffline: "GitHub unreachable — built-in list",
+      syncError: "scan failed — built-in list",
+      syncRefresh: "refresh",
+      emptyTitle: "No matches",
+      emptyBody: "Nothing matches “{q}” here. Try another word or clear the search.",
+      emptyAllTitle: "Nothing here yet",
+      emptyAllBody: "Push a folder that contains an index.html into the repository root and it will show up on this page.",
+      noteLive: "<b>Auto-detected.</b> This list is read live from the <code>{repo}</code> repository: every root folder containing an <code>index.html</code> becomes a card, so new uploads appear on their own. Names and descriptions come from the fallback list inside this HTML; projects that are not in it get theirs from their own page, and you can edit that list to set your own names, descriptions, colours and order. Whenever GitHub cannot be reached, the built-in list is used instead.",
+      noteCached: "<b>Auto-detected (cached).</b> This list was read from the <code>{repo}</code> repository a few minutes ago and is being reused to stay under GitHub's rate limit. Hit <code>refresh</code> to scan again.",
+      noteOffline: "<b>Showing the built-in list.</b> GitHub could not be reached from this browser (offline, blocked, or rate-limited), so the page is using the project list embedded in it. All links still work.",
+      footMade: "Junk on GitHub — a personal dumping ground.",
+      footReadme: "Readme (my index)",
+      footSource: "Source & games",
+      newBadge: "new",
+      host: "github.io"
+    },
+    zh: {
+      htmlLang: "zh-CN",
+      title: "Junk on GitHub — 项目索引",
+      brandSub: "项目索引",
+      eyebrow: "自动更新索引",
+      h1: "我扔在 GitHub 上的所有东西，",
+      h1b: "都在这一个页面里。",
+      lede: "使用 AI 生产的无聊项目。如果你问我它们有什么用——没有用，就这么简单。托管在这里，让我随时随地访问我的垃圾。",
+      statProjects: "个项目",
+      statSyncing: "同步中…",
+      statSynced: "已同步 {t}",
+      statOffline: "离线列表",
+      statError: "扫描失败",
+      search: "搜索项目…",
+      searchAria: "搜索项目",
+      filterAll: "全部",
+      filterGame: "游戏",
+      filterTool: "实验",
+      filterWebgl: "WebGL",
+      filterCanvas: "Canvas",
+      play: "打开",
+      syncLoading: "正在检查仓库…",
+      syncLive: "实时 · 找到 {n} 个",
+      syncCached: "缓存 · 找到 {n} 个",
+      syncOffline: "连不上 GitHub — 使用内置列表",
+      syncError: "扫描失败 — 使用内置列表",
+      syncRefresh: "刷新",
+      emptyTitle: "没有匹配的项目",
+      emptyBody: "这里没有和“{q}”匹配的内容。换个词，或者清空搜索。",
+      emptyAllTitle: "这里还什么都没有",
+      emptyAllBody: "往仓库根目录推一个含 index.html 的文件夹，它就会自动出现在这个页面上。",
+      noteLive: "<b>自动检测。</b>这份列表是实时从 <code>{repo}</code> 仓库读取的：凡是根目录下含有 <code>index.html</code> 的文件夹都会变成一张卡片，所以你新上传的项目会自己出现。名称和简介取自本页面内置的列表；不在列表里的新项目则读取它自己页面的信息。你可以直接编辑那份列表，自定义名称、简介、配色和排序。连不上 GitHub 时，页面会改用内置列表。",
+      noteCached: "<b>自动检测（缓存）。</b>这份列表是几分钟前从 <code>{repo}</code> 仓库读取的，为了不超过 GitHub 的请求频率限制而直接复用。点 <code>刷新</code> 可以重新扫描。",
+      noteOffline: "<b>当前显示内置列表。</b>这个浏览器连不上 GitHub（离线、被拦截或触发限流），所以页面用了内置的项目列表。所有链接依然可用。",
+      footMade: "Junk on GitHub — 一个私人垃圾场。",
+      footReadme: "README（我的原版索引）",
+      footSource: "源码与游戏",
+      newBadge: "新",
+      host: "github.io"
+    }
+  };
+
+  /* ==========================================================================
+     4. LANGUAGE — default English, switch to Chinese when the browser is zh-*
+     ========================================================================== */
+  var LS_LANG = "jog.lang";
+  var lang = "en";
+
+  function storeLang(v) {
+    try { localStorage.setItem(LS_LANG, v); return true; } catch (e) { return false; }
+  }
+
+  function detectLang() {
+    try {
+      var saved = localStorage.getItem(LS_LANG);
+      if (saved === "en" || saved === "zh") return saved;
+    } catch (e) {}
+    var list = [];
+    try {
+      if (navigator.languages && navigator.languages.length) list = list.concat(navigator.languages);
+      if (navigator.language) list.push(navigator.language);
+      if (navigator.userLanguage) list.push(navigator.userLanguage);
+    } catch (e) {}
+    for (var i = 0; i < list.length; i++) {
+      var tag = String(list[i] || "").toLowerCase();
+      if (!tag) continue;
+      if (tag.indexOf("zh") === 0 || tag.indexOf("cn") === 0) return "zh";
+      // first recognizable language wins: if it is not Chinese, stay English
+      if (/^[a-z]{2}/.test(tag)) return "en";
+    }
+    return "en";
+  }
+
+  function T(key) {
+    var v = (STRINGS[lang] && STRINGS[lang][key]);
+    if (v == null) v = STRINGS.en[key];
+    return v == null ? key : v;
+  }
+  function fmt(str, map) {
+    return String(str).replace(/\{(\w+)\}/g, function (m, k) {
+      return Object.prototype.hasOwnProperty.call(map, k) ? map[k] : m;
+    });
+  }
+
+  /* ==========================================================================
+     5. DATA ACCESS
+     ========================================================================== */
+  function fetchWithTimeout(url, ms) {
+    var ctrl = ("AbortController" in window) ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, ms);
+    var opts = { cache: "no-store", headers: { "Accept": "application/json, text/plain, */*" } };
+    if (ctrl) opts.signal = ctrl.signal;
+    return fetch(url, opts).then(function (res) {
+      clearTimeout(timer);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res;
+    }, function (err) {
+      clearTimeout(timer);
+      throw err;
+    });
+  }
+
+  function readCache() {
+    try {
+      var raw = sessionStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      if (!obj || !obj.at || !obj.list || !obj.list.length) return null;
+      if (Date.now() - obj.at > CACHE_MS) return null;
+      return obj;
+    } catch (e) { return null; }
+  }
+  function writeCache(list) {
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), list: list })); } catch (e) {}
+  }
+  function clearCache() {
+    try { sessionStorage.removeItem(CACHE_KEY); } catch (e) {}
+  }
+
+  /* Try the authenticated-free endpoints in order; first usable tree wins. */
+  function fetchTree() {
+    var urls = [
+      "https://api.github.com/repos/" + OWNER + "/" + REPO + "/git/trees/" + BRANCH + "?recursive=1",
+      "https://cdn.jsdelivr.net/gh/" + OWNER + "/" + REPO + "@" + BRANCH + "/"
+    ];
+    return step(0);
+    function step(i) {
+      if (i >= urls.length) return Promise.reject(new Error("all endpoints failed"));
+      return fetchWithTimeout(urls[i], API_TIMEOUT)
+        .then(function (res) { return res.text(); })
+        .then(function (text) { return parseTree(text); })
+        .catch(function () { return step(i + 1); });
+    }
+  }
+
+  function parseTree(text) {
+    var data;
+    try { data = JSON.parse(text); } catch (e) { data = null; }
+    var files = [];
+    if (data && data.tree && Object.prototype.toString.call(data.tree) === "[object Array]") {
+      for (var i = 0; i < data.tree.length; i++) {
+        var n = data.tree[i];
+        if (n && typeof n.path === "string") files.push(n.path);
+      }
+    } else if (data && Object.prototype.toString.call(data) === "[object Array]") {
+      // jsDelivr flat listing: {"type":"directory","name":"x"} entries
+      for (var j = 0; j < data.length; j++) {
+        var e = data[j];
+        if (e && typeof e.name === "string" && (e.type === "directory" || e.type === "file")) {
+          files.push(e.name);
+        }
+      }
+    }
+    return files;
+  }
+
+  function toProjects(files) {
+    var SKIP = {};
+    SKIP[SELF] = 1; SKIP[".github"] = 1; SKIP["node_modules"] = 1; SKIP["covers"] = 1; SKIP["assets"] = 1;
+    var dirs = {};          // dir -> true
+    var hasIndex = {};      // dir -> true
+    for (var i = 0; i < files.length; i++) {
+      var p = files[i];
+      if (!p || p.charAt(0) === ".") continue;
+      var seg = p.split("/");
+      if (seg.length < 2) continue;
+      if (SKIP[seg[0]]) continue;
+      dirs[seg[0]] = 1;
+      if (seg.length === 2 && /^index\.html?$/i.test(seg[1])) hasIndex[seg[0]] = 1;
+    }
+    var out = [];
+    for (var d in dirs) {
+      if (Object.prototype.hasOwnProperty.call(dirs, d) && hasIndex[d]) out.push(d);
+    }
+    return out;
+  }
+
+  /* Best-effort per-project metadata; never blocks rendering for long. */
+  function enrich(dir) {
+    var url = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH + "/" + dir + "/index.html";
+    return fetchWithTimeout(url, META_TIMEOUT)
+      .then(function (res) { return res.text(); })
+      .then(function (html) {
+        var out = {};
+        var t = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        if (t && t[1]) out.pageTitle = clean(t[1]);
+        var m = html.match(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)["']/i)
+             || html.match(/<meta[^>]+content=["']([^"']*)["'][^>]*name=["']description["']/i);
+        if (m && m[1]) out.pageDesc = clean(m[1]);
+        var o = html.match(/<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']*)["']/i);
+        if (o && o[1]) out.pageTitle = clean(o[1]);
+        var od = html.match(/<meta[^>]+property=["']og:description["'][^>]*content=["']([^"']*)["']/i);
+        if (od && od[1]) out.pageDesc = clean(od[1]);
+        return out;
+      })
+      .catch(function () { return {}; });
+  }
+  function clean(s) {
+    return String(s)
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  /* ==========================================================================
+     6. STATE
+     ========================================================================== */
+  var state = {
+    list: [],            // rendered projects
+    filter: "all",
+    q: "",
+    status: "loading",   // loading | live | cached | offline | error
+    stamp: null
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var grid, filtersEl, qEl, syncEl, syncTextEl, noteEl, statCountEl, statStampEl, statHostEl;
+
+  /* ==========================================================================
+     7. RENDER
+     ========================================================================== */
+  function projectTitle(p) {
+    if (p.name && p.name[lang]) return p.name[lang];
+    if (p.name && p.name.en) return p.name.en;
+    if (p.pageTitle) return p.pageTitle;
+    return prettyDir(p.dir);
+  }
+  function projectDesc(p) {
+    if (p.desc && p.desc[lang]) return p.desc[lang];
+    if (p.desc && p.desc.en) return p.desc.en;
+    if (p.pageDesc) return p.pageDesc;
+    if (p.isNew) return lang === "zh" ? "仓库里的新项目，还没有人工简介。" : "New in the repository — no hand-written description yet.";
+    return lang === "zh" ? "暂无简介。" : "No description yet.";
+  }
+  function prettyDir(dir) {
+    return String(dir).replace(/[-_]+/g, " ").replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); });
+  }
+  function initialOf(p) {
+    var t = projectTitle(p).replace(/[^0-9A-Za-z\u4e00-\u9fa5]/g, "");
+    return (t.charAt(0) || "?").toUpperCase();
+  }
+  function hostOf(p) { return PAGES_BASE + p.dir + "/"; }
+  function searchBlob(p) {
+    return [p.dir, p.pageTitle || "", p.pageDesc || "",
+            (p.name && (p.name.en || "") + " " + (p.name.zh || "")) || "",
+            (p.desc && ((p.desc.en || "") + " " + (p.desc.zh || ""))) || "",
+            (p.tags || []).join(" ")].join(" ").toLowerCase();
+  }
+  function matches(p) {
+    if (state.filter !== "all") {
+      if (state.filter === "webgl" || state.filter === "canvas") {
+        if (!hasTag(p, state.filter)) return false;
+      } else if (p.kind !== state.filter) return false;
+    }
+    if (state.q && searchBlob(p).indexOf(state.q) === -1) return false;
+    return true;
+  }
+  function hasTag(p, want) {
+    var tags = p.tags || [];
+    for (var i = 0; i < tags.length; i++) {
+      if (String(tags[i]).toLowerCase().indexOf(want) !== -1) return true;
+    }
+    return false;
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function card(p, index) {
+    var a = el("a", "card");
+    a.href = hostOf(p);
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.animationDelay = Math.min(index * 45, 400) + "ms";
+    a.style.setProperty("--g", "linear-gradient(140deg," + (p.c1 || "#4f46e5") + "," + (p.c2 || "#22d3ee") + ")");
+    a.setAttribute("aria-label", projectTitle(p));
+
+    var cover = el("div", "cover");
+    cover.appendChild(el("span", "initial", initialOf(p)));
+    cover.appendChild(el("span", "slug", p.dir));
+    if (p.isNew) cover.appendChild(el("span", "badge-new", T("newBadge")));
+    a.appendChild(cover);
+
+    var body = el("div", "card-body");
+    body.appendChild(el("h2", "card-title", projectTitle(p)));
+    body.appendChild(el("p", "card-desc", projectDesc(p)));
+
+    var foot = el("div", "card-foot");
+    var tags = el("div", "tags");
+    (p.tags || []).slice(0, 3).forEach(function (t) { tags.appendChild(el("span", "tag", t)); });
+    foot.appendChild(tags);
+
+    var play = el("span", "play");
+    play.appendChild(document.createTextNode(T("play")));
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M5 12h13M12 5l7 7-7 7");
+    svg.appendChild(path);
+    play.appendChild(svg);
+    foot.appendChild(play);
+
+    body.appendChild(foot);
+    a.appendChild(body);
+    return a;
+  }
+
+  function renderFilters() {
+    var counts = { all: state.list.length, game: 0, tool: 0, webgl: 0, canvas: 0 };
+    state.list.forEach(function (p) {
+      if (p.kind === "game") counts.game++;
+      if (p.kind === "tool") counts.tool++;
+      if (hasTag(p, "webgl")) counts.webgl++;
+      if (hasTag(p, "canvas")) counts.canvas++;
+    });
+    var defs = [];
+    defs.push(["all", T("filterAll"), counts.all]);
+    if (counts.game) defs.push(["game", T("filterGame"), counts.game]);
+    if (counts.tool) defs.push(["tool", T("filterTool"), counts.tool]);
+    if (counts.webgl) defs.push(["webgl", T("filterWebgl"), counts.webgl]);
+    if (counts.canvas) defs.push(["canvas", T("filterCanvas"), counts.canvas]);
+
+    filtersEl.textContent = "";
+    defs.forEach(function (d) {
+      var b = el("button", "chip");
+      b.type = "button";
+      b.setAttribute("aria-pressed", state.filter === d[0] ? "true" : "false");
+      b.appendChild(document.createTextNode(d[1]));
+      b.appendChild(el("i", null, String(d[2])));
+      b.addEventListener("click", function () {
+        state.filter = d[0];
+        renderFilters();
+        renderGrid();
+      });
+      filtersEl.appendChild(b);
+    });
+  }
+
+  function renderGrid() {
+    var shown = state.list.filter(matches);
+    grid.textContent = "";
+    grid.setAttribute("aria-busy", "false");
+
+    if (!shown.length) {
+      var box = el("div", "empty");
+      if (state.list.length === 0) {
+        box.appendChild(el("b", null, T("emptyAllTitle")));
+        box.appendChild(document.createTextNode(T("emptyAllBody")));
+      } else {
+        box.appendChild(el("b", null, T("emptyTitle")));
+        box.appendChild(document.createTextNode(fmt(T("emptyBody"), { q: state.q || "—" })));
+      }
+      grid.appendChild(box);
+      return;
+    }
+    shown.forEach(function (p, i) { grid.appendChild(card(p, i)); });
+  }
+
+  function renderSkeletons() {
+    grid.textContent = "";
+    for (var i = 0; i < 4; i++) {
+      var c = el("div", "card skel");
+      c.appendChild(el("div", "skel-cover"));
+      c.appendChild(el("div", "skel-line w60"));
+      c.appendChild(el("div", "skel-line w85"));
+      c.appendChild(el("div", "skel-line w60 last"));
+      grid.appendChild(c);
+    }
+  }
+
+  function renderChrome() {
+    document.documentElement.lang = T("htmlLang");
+    document.title = T("title");
+    statHostEl.textContent = T("host");
+    document.querySelectorAll("[data-i18n]").forEach(function (n) {
+      var k = n.getAttribute("data-i18n");
+      if (STRINGS.en[k] != null) n.textContent = T(k);
+    });
+    qEl.placeholder = T("search");
+    qEl.setAttribute("aria-label", T("searchAria"));
+    document.querySelectorAll(".lang button").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-lang") === lang ? "true" : "false");
+    });
+    renderSync();
+    renderNote();
+  }
+
+  function renderSync() {
+    syncEl.setAttribute("data-state", state.status === "live" ? "live" : state.status);
+    var n = state.list.length;
+    var text;
+    if (state.status === "loading") text = T("syncLoading");
+    else if (state.status === "live") text = fmt(T("syncLive"), { n: n });
+    else if (state.status === "cached") text = fmt(T("syncCached"), { n: n });
+    else if (state.status === "offline") text = T("syncOffline");
+    else text = T("syncError");
+    syncTextEl.textContent = text;
+
+    statCountEl.textContent = String(n);
+    if (state.status === "live" || state.status === "cached") {
+      var d = state.stamp ? new Date(state.stamp) : new Date();
+      var hh = String(d.getHours()).padStart(2, "0");
+      var mm = String(d.getMinutes()).padStart(2, "0");
+      statStampEl.textContent = fmt(T("statSynced"), { t: hh + ":" + mm });
+    } else if (state.status === "offline") {
+      statStampEl.textContent = T("statOffline");
+    } else if (state.status === "error") {
+      statStampEl.textContent = T("statError");
+    } else {
+      statStampEl.textContent = T("statSyncing");
+    }
+  }
+
+  function renderNote() {
+    var repo = OWNER + "/" + REPO;
+    var key = state.status === "live" ? "noteLive"
+            : state.status === "cached" ? "noteCached"
+            : "noteOffline";
+    if (state.status === "loading") { noteEl.innerHTML = ""; return; }
+    noteEl.innerHTML = fmt(T(key), { repo: "<code>" + repo + "</code>" });
+  }
+
+  /* ==========================================================================
+     8. MERGE + LOAD
+     ========================================================================== */
+  function buildFallbackList() {
+    return FALLBACK_PROJECTS.map(function (p, i) {
+      return {
+        dir: p.dir, name: p.name, desc: p.desc, tags: p.tags || [],
+        kind: p.kind || "game", c1: p.c1, c2: p.c2, order: i,
+        isNew: false, pageTitle: "", pageDesc: ""
+      };
+    });
+  }
+
+  function merge(remoteDirs) {
+    var byDir = {};
+    FALLBACK_PROJECTS.forEach(function (p, i) { byDir[p.dir] = i; });
+    var out = [];
+    var remoteSet = {};
+    remoteDirs.forEach(function (d) { remoteSet[d] = 1; });
+
+    // known projects that still exist upstream keep their metadata and order
+    FALLBACK_PROJECTS.forEach(function (p, i) {
+      if (!remoteSet[p.dir]) return;               // gone from the repo -> dropped
+      out.push({
+        dir: p.dir, name: p.name, desc: p.desc, tags: p.tags || [],
+        kind: p.kind || "game", c1: p.c1, c2: p.c2, order: i,
+        isNew: false, pageTitle: "", pageDesc: ""
+      });
+    });
+
+    // unknown folders become cards with a generated palette
+    var fresh = remoteDirs.filter(function (d) { return !(d in byDir); }).sort();
+    fresh.forEach(function (d, i) {
+      var pal = palette(i);
+      out.push({
+        dir: d, name: null, desc: null, tags: [], kind: "game",
+        c1: pal[0], c2: pal[1], order: 1000 + i, isNew: true,
+        pageTitle: "", pageDesc: ""
+      });
+    });
+    return out;
+  }
+
+  var PALETTE = [
+    ["#8b5cf6", "#22d3ee"], ["#f472b6", "#8b5cf6"], ["#34d399", "#0ea5e9"],
+    ["#fbbf24", "#f97316"], ["#60a5fa", "#a78bfa"], ["#f87171", "#fbbf24"],
+    ["#2dd4bf", "#6366f1"], ["#e879f9", "#3b82f6"]
+  ];
+  function palette(i) { return PALETTE[i % PALETTE.length]; }
+
+  function apply(newList, status, stamp) {
+    state.list = newList;
+    state.status = status;
+    state.stamp = stamp || null;
+    renderFilters();
+    renderGrid();
+    renderSync();
+    renderNote();
+  }
+
+  function load(force) {
+    state.status = "loading";
+    renderSync();
+    if (!state.list.length) renderSkeletons();
+
+    if (!force) {
+      var c = readCache();
+      if (c) {
+        apply(merge(c.list), "cached", c.at);
+        return Promise.resolve();
+      }
+    } else {
+      clearCache();
+    }
+
+    return fetchTree()
+      .then(function (files) {
+        var dirs = toProjects(files);
+        if (!dirs.length) throw new Error("no projects found in tree");
+        var list = merge(dirs);
+        // enrich in the background, keep the built-in copy as instant fallback
+        var jobs = list.map(function (p) {
+          return enrich(p.dir).then(function (meta) {
+            p.pageTitle = meta.pageTitle || "";
+            p.pageDesc = meta.pageDesc || "";
+          });
+        });
+        apply(list, "live", Date.now());
+        writeCache(dirs);
+        return Promise.all(jobs).then(function () {
+          renderGrid();
+        });
+      })
+      .catch(function () {
+        var local = buildFallbackList();
+        apply(local, "offline", null);
+      });
+  }
+
+  /* ==========================================================================
+     9. WIRING
+     ========================================================================== */
+  function init() {
+    grid = $("grid"); filtersEl = $("filters"); qEl = $("q"); syncEl = $("sync");
+    syncTextEl = $("syncText"); noteEl = $("note"); statCountEl = $("statCount");
+    statStampEl = $("statStamp"); statHostEl = $("statHost");
+
+    lang = detectLang();
+    // remember the auto-detected choice too, so the page never "re-detects"
+    // and flips back on the next visit
+    storeLang(lang);
+    $("repoLink").href = GITHUB_URL;
+    statHostEl.textContent = T("host");
+
+    document.querySelectorAll(".lang button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var next = b.getAttribute("data-lang");
+        if (next === lang) return;
+        lang = next;
+        storeLang(lang);
+        renderChrome();
+        renderFilters();
+        renderGrid();
+      });
+    });
+
+    var t = null;
+    qEl.addEventListener("input", function () {
+      clearTimeout(t);
+      t = setTimeout(function () {
+        state.q = qEl.value.trim().toLowerCase();
+        renderGrid();
+      }, 90);
+    });
+
+    $("resync").addEventListener("click", function (e) {
+      e.preventDefault();
+      qEl.value = ""; state.q = ""; state.filter = "all";
+      renderFilters();
+      load(true);
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "/" && document.activeElement !== qEl) {
+        e.preventDefault(); qEl.focus();
+      } else if (e.key === "Escape" && document.activeElement === qEl) {
+        qEl.value = ""; state.q = ""; renderGrid(); qEl.blur();
+      }
+    });
+
+    var totop = $("totop");
+    window.addEventListener("scroll", function () {
+      totop.classList.toggle("show", window.scrollY > 420);
+    }, { passive: true });
+    totop.addEventListener("click", function () { window.scrollTo({ top: 0, behavior: "smooth" }); });
+
+    renderChrome();
+    load(false);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+</body>
+</html>
