@@ -9,21 +9,8 @@ So why am I uploading these? To host the web pages, so I can access my junk anyt
 If you find it interesting, feel free to change whatever you want.<br>
 
 ### Available Links
-**[Analog Horror - Cube]**<br>
-Description: A mockumentary simulation observing a creature I saw in my dream.<br>
-Link: https://hachiixuan.github.io/junk-on-github/ah-cube/
-
-**[Analog Horror - Tornado]**<br>
-Description: A simulation of an emergency broadcast system warning about a tornado. (Warning: contains flashing imagery and voice narration)<br>
-Link: https://hachiixuan.github.io/junk-on-github/ah-tornado/
-
-**[Probe]**<br>
-Description: Disguised as a remote upload of user device features, meant to prank non-tech-savvy friends. This webpage actually contains no remote connections.<br>
-Link: https://hachiixuan.github.io/junk-on-github/probe/
-
-**[Wukong Prime Sim]**<br>
-Description: A gameplay in Warframe. I love Warframe <3<br>
-Link: https://hachiixuan.github.io/junk-on-github/wukong-prime-sim/
+All projects are now listed on the index page:<br>
+Link: https://hachiixuan.github.io/junk-on-github
 
 ---
 
@@ -38,18 +25,5 @@ Link: https://hachiixuan.github.io/junk-on-github/wukong-prime-sim/
 如果你觉得有意思，你可以随便做出更改。<br>
 
 ### 可用链接
-**[模拟恐怖-方块]**<br>
-描述：模拟伪纪录片，观察我梦到的生物。<br>
-链接：https://hachiixuan.github.io/junk-on-github/ah-cube/
-
-**[模拟恐怖-龙卷风]**<br>
-描述：模拟紧急广播系统发布的龙卷风警报。（含频闪画面与语音播报）<br>
-链接：https://hachiixuan.github.io/junk-on-github/ah-tornado/
-
-**[探针]**<br>
-描述：伪装成用户设备特征被远程上传，用来对不懂技术的朋友进行恶作剧，该网页实际不含任何远程连接。<br>
-链接：https://hachiixuan.github.io/junk-on-github/probe/
-
-**[WukongPrime模拟器]**<br>
-描述：在Warframe中的一个玩法，我爱Warframe<3<br>
-链接：https://hachiixuan.github.io/junk-on-github/wukong-prime-sim/
+所有项目现已整理到索引页：<br>
+链接：https://hachiixuan.github.io/junk-on-github
