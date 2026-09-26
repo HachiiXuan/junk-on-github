@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="AURORA-01 dedicated server console">
+<title>AURORA-01 · fake-server</title>
+
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/console.css">
+<link rel="stylesheet" href="css/panel.css">
+<link rel="stylesheet" href="css/effects.css">
+<!-- 移动端 / 竖屏适配放最后，媒体查询才能覆盖上面的默认布局 -->
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ 顶部信息栏 ============ -->
+  <header id="topbar">
+    <div class="map-name"><span class="dot"></span><span id="mapName">AURORA-01</span></div>
+
+    <div class="top-sep"></div>
+
+    <div class="top-item" id="onlineCount">
+      <span class="label" id="onlineLabel">online</span>
+      <span class="value" id="onlineVal">0 / 32</span>
+    </div>
+
+    <div class="top-sep"></div>
+
+    <div class="top-item">
+      <span class="label">t</span>
+      <span class="value tnum" id="timeVal">06:00</span>
+    </div>
+
+    <div class="top-item" id="weather">
+      <span class="label" id="weatherLabel">weather</span>
+      <span class="value" id="weatherVal">clear</span>
+    </div>
+
+    <div id="topSpacer"></div>
+
+    <div class="top-tools">
+      <button class="chip btn-reset" id="langBtn" title="language"><span id="langLabel">ZH</span></button>
+      <button class="chip btn-reset" id="panelToggle" title="debug panel  (Ctrl+B = 沉浸模式)">
+        <span class="icon" id="panelToggleIcon">&#9666;</span><span class="cap" id="panelToggleCap">hide</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ 主区：控制台 + 右侧调试面板 ============ -->
+  <!-- 默认就是收起状态：面板是给开发者看的，不该在第一次打开时出现。
+       直接写在 HTML 上，避免 JS 加载前先闪一下展开的面板。 -->
+  <div id="main" class="panel-collapsed">
+
+    <div id="consoleWrap">
+      <div id="log" class="scroll"></div>
+
+      <button id="jumpLatest" class="btn-reset">
+        <span class="arrow">&#8595;</span><span id="jumpLatestLabel">jump to latest</span>
+      </button>
+
+      <div id="inputRow">
+        <span class="prompt">&gt;</span>
+        <input id="cmdInput" type="text" autocomplete="off" autocorrect="off"
+               autocapitalize="off" spellcheck="false" placeholder="type a command, or &quot;help&quot;">
+        <span id="fakeCaret"></span>
+        <span class="input-hint" id="inputHint"></span>
+      </div>
+    </div>
+
+    <aside id="panel">
+      <div class="panel-head">
+        <span class="panel-title" id="panelTitle">debug</span>
+      </div>
+      <div class="panel-body scroll" id="panelBody"></div>
+      <div class="panel-strip" id="panelStrip" title="show debug panel">
+        <span class="arrow">&#9666;</span>
+        <span class="dot"></span>
+        <span id="panelStripLabel">DEBUG</span>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- ============ 屏幕效果（扫描线 / 暗角 / 噪点） ============ -->
+<div id="fx" aria-hidden="true">
+  <div class="scanlines"></div>
+  <div class="noise"></div>
+  <div class="vignette"></div>
+  <div class="flicker"></div>
+</div>
+
+<!-- ============ 沉浸模式提示（Ctrl+B / F2 退出） ============ -->
+<div id="immersiveHint" aria-hidden="true"><span id="immersiveHintText">Ctrl+B / F2 to exit</span></div>
+
+<!-- ==========================================================================
+     脚本按依赖顺序加载（普通 script，不用 ES Module / fetch，
+     这样 file:// 双击 index.html 就能运行）
+     ========================================================================== -->
+
+<!-- 内核 -->
+<script src="js/core/namespace.js"></script>
+<script src="js/core/rng.js"></script>
+<script src="js/core/util.js"></script>
+<script src="js/core/i18n.js"></script>
+<script src="js/core/clock.js"></script>
+<script src="js/core/bus.js"></script>
+<script src="js/core/tick.js"></script>
+
+<!-- 内容数据 -->
+<script src="data/config.js"></script>
+<script src="data/colors.js"></script>
+<script src="data/places.js"></script>
+<script src="data/items.js"></script>
+<script src="data/threats.js"></script>
+<script src="data/names.js"></script>
+<script src="data/agents.js"></script>
+<script src="data/goals.js"></script>
+<script src="data/topics.js"></script>
+<script src="data/locale/en.js"></script>
+<script src="data/locale/zh.js"></script>
+
+<!-- 状态 -->
+<script src="js/state/agent.js"></script>
+<script src="js/state/agentUpdate.js"></script>
+<script src="js/state/memory.js"></script>
+<script src="js/state/goal.js"></script>
+<script src="js/state/world.js"></script>
+<script src="js/state/joins.js"></script>
+<script src="js/state/leave.js"></script>
+<script src="js/state/death.js"></script>
+<script src="js/state/noise.js"></script>
+<script src="js/state/faction.js"></script>
+
+<!-- 角色智能 -->
+<script src="js/ai/decision.js"></script>
+<script src="js/ai/dialogue.js"></script>
+<script src="js/ai/actions.js"></script>
+
+<!-- 渲染 -->
+<script src="js/render/log.js"></script>
+<script src="js/render/topbar.js"></script>
+<script src="js/render/panel.js"></script>
+
+<!-- 命令 -->
+<script src="js/cmd/commands.js"></script>
+<script src="js/cmd/effects.js"></script>
+<script src="js/cmd/parser.js"></script>
+
+<!-- 持久化与快进 -->
+<script src="js/persist/store.js"></script>
+<script src="js/persist/snapshot.js"></script>
+<script src="js/backfill.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,128 @@
+/* ==========================================================================
+   responsive.css —— 移动端 / 竖屏适配（v0.4）
+   ==========================================================================
+   设计目标：手机上"看起来像在看服务器后台"，而不是像在用一个网页。
+
+   竖屏（<= 820px 宽 或 竖握）下的三处调整：
+     1. 右侧调试面板从"并排一列"变成"底部抽屉"：横屏放不下两列，
+        硬塞会把控制台压成一条缝。
+     2. 顶栏换成两行可横向滑动的小条：地图名 + 在线数 + 时间 + 天气，
+        手机上横向空间不够，宁可让它能滑也不要换行折成两排。
+     3. 输入框字号 ≥16px：iOS Safari 在字号小于 16px 时会自动放大页面。
+     4. 用 dvh 而不是 vh：移动浏览器地址栏收放会让 100vh 抖动。
+
+   桌面端不受任何影响（所有规则都在媒体查询里）。
+   ========================================================================== */
+
+/* ---------------- 触摸设备：去掉 hover 依赖 ---------------- */
+@media (hover: none) {
+  /* 触摸屏没有 hover，靠 hover 才显形的交互元素改成常显 */
+  #jumpLatest { opacity: .92; }
+  .agent-row:hover { background: none; }
+  .agent-row:active { background: rgba(86, 211, 100, .08); }
+}
+
+/* ---------------- 竖屏 / 窄屏 ---------------- */
+@media (max-width: 820px), (orientation: portrait) and (max-width: 1024px) {
+
+  /* 高度用 dvh，避免地址栏收放时抖动 */
+  html, body {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  /* --- 顶栏：允许横向滑动，别换行 --- */
+  #topbar {
+    gap: 10px;
+    padding: 0 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #topbar::-webkit-scrollbar { display: none; }
+  #topSpacer { flex: 0 0 8px; }
+
+  .map-name { font-size: 12px; letter-spacing: 1px; }
+  .top-item { font-size: 11px; gap: 4px; }
+  .top-item .label { font-size: 10px; }
+  #onlineCount .value { font-size: 12px; }
+
+  /* 折叠按钮的副标题在手机上没必要 */
+  #panelToggle .cap { display: none; }
+
+  /* --- 主区：面板改成底部抽屉 --- */
+  #main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    transition: none;
+  }
+  #main.panel-collapsed { grid-template-columns: 1fr; }
+
+  /* 面板：占屏幕下半部分，可滚动 */
+  #panel {
+    max-height: 46dvh;
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+  /* 收起时只留一条"抽屉把手"，点它展开 */
+  #main.panel-collapsed #panel {
+    max-height: var(--panel-w-collapsed);
+  }
+  .panel-strip {
+    writing-mode: horizontal-tb;   /* 竖排文字在手机上读不了 */
+    flex-direction: row;
+    height: var(--panel-w-collapsed);
+    width: auto;
+    padding: 0 10px;
+  }
+
+  /* --- 控制台 --- */
+  #log { padding: 8px 10px 12px; }
+
+  .logline {
+    grid-template-columns: 62px 1fr;
+    font-size: 12px;
+  }
+  .logline .thread { display: none; }      /* 线程名在手机上太占位，隐藏 */
+  .logline .ts { font-size: 10px; }
+
+  /* --- 输入框：字号 ≥16px，防 iOS 自动放大 --- */
+  #inputRow { padding: 6px 8px; }
+  #cmdInput {
+    font-size: 16px;
+    caret-color: transparent;
+  }
+  #fakeCaret { height: 18px; }
+  #inputHint { display: none; }            /* 提示文字在手机上挤，靠 placeholder */
+  #cmdInput::placeholder { display: block; }
+
+  /* --- 面板内部：字号收紧，行高加大方便点 --- */
+  .panel-body { font-size: 11px; }
+  .agent-row { padding: 7px 8px; }
+  .agent-row .name { font-size: 12px; }
+  .kv { padding: 4px 0; }
+  .panel-body input[type="number"] { width: 64px; font-size: 12px; }
+  button.chip { padding: 5px 9px; }        /* 触摸目标大一点 */
+}
+
+/* ---------------- 很窄的手机（<= 420px） ---------------- */
+@media (max-width: 420px) {
+  .map-name { letter-spacing: 0; }
+  /* 天气文字最长，先让它能让位 */
+  #weather .label { display: none; }
+  .logline { grid-template-columns: 54px 1fr; }
+  #panel { max-height: 52dvh; }
+}
+
+/* ---------------- 极矮的横屏（<= 420px 高） ---------------- */
+@media (max-height: 420px) and (orientation: landscape) {
+  :root { --topbar-h: 30px; --input-h: 32px; }
+  #panel { max-height: 60dvh; }
+}
+
+/* ---------------- 打印 / 减少动效偏好 ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  #main { transition: none; }
+  .scanlines, .flicker, .noise { animation: none !important; }
+}

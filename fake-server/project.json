@@ -1,0 +1,11 @@
+{
+  "name": { "en": "Fake Server", "zh": "伪服务器" },
+  "desc": {
+    "en": "A simulated backend disguised as a game server, exploring emergent gameplay mechanics (but it failed miserably and is now just pure junk).",
+    "zh": "伪装成游戏服务器的模拟后台，尝试实现涌现玩法的测试（但实际上很失败，现在这是真正的垃圾了）。"
+  },
+  "tags": ["Simulation", "Console", "Interactive"],
+  "category": "game",
+  "color": ["#10b981", "#064e3b"],
+  "order": 6
+}

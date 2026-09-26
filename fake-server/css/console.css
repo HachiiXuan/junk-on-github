@@ -1,0 +1,96 @@
+/* ==========================================================================
+   console.css —— 日志行、级别配色、聊天行、输入行细节
+   行结构（grid 三列）：
+     .ts      时间戳
+     .thread  线程名（聊天行不显示）
+     .body    级别标签 + 正文，长文本在此列内部换行（挂起缩进）
+   ========================================================================== */
+
+#log {
+  font-size: var(--fs);
+  line-height: var(--lh);
+}
+
+.logline {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  column-gap: 8px;
+  align-items: start;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  padding: 0;
+}
+
+/* 文本直接"生硬"打印：不做淡入、不做滑入。
+   终端就是一行一行蹦出来的，任何过渡都会暴露这是网页。
+   渲染层也不再给行加任何入场类（曾经有个 .enter 淡入，已去掉）。 */
+
+.logline .ts {
+  color: var(--fg-faint);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.logline .thread {
+  color: #33413b;
+  user-select: none;
+  white-space: nowrap;
+}
+.logline .thread::before { content: '['; }
+.logline .thread::after  { content: ']'; }
+
+.logline .body { min-width: 0; }
+
+/* 级别标签 */
+.lv {
+  font-weight: 600;
+  user-select: none;
+  margin-right: 2px;
+}
+
+/* 级别配色 */
+.logline.lv-INFO   .lv      { color: var(--fg-faint); }
+.logline.lv-WARN   .lv      { color: var(--warn); }
+.logline.lv-WARN   .msg     { color: #cbb794; }
+.logline.lv-ERROR  .lv      { color: var(--error); }
+.logline.lv-ERROR  .msg     { color: #e0a09b; }
+.logline.lv-SYSTEM .lv      { color: var(--cyan); }
+.logline.lv-SYSTEM .msg     { color: #9fd4d8; }
+.logline.lv-DEBUG  .lv      { color: #45514b; }
+.logline.lv-DEBUG  .msg     { color: #56635c; }
+
+.logline.lv-INFO .msg { color: var(--fg); }
+
+/* 聊天行：<名字> 内容，名字用角色色 */
+.logline.chat .msg { color: var(--fg-bright); }
+.logline.chat .name {
+  color: var(--name-color, var(--accent));
+  font-weight: 600;
+}
+.logline.chat .bracket { color: #3c4a44; }
+
+/* 系统分隔行（如"以上为历史记录"） */
+.logline.divider {
+  grid-template-columns: minmax(0, 1fr);
+  color: var(--fg-faint);
+  text-align: center;
+  padding: 6px 0;
+  letter-spacing: 1px;
+  font-size: 11px;
+}
+
+/* 空状态提示 */
+.logline.quiet .msg { color: var(--fg-faint); font-style: italic; }
+
+/* ---------------- 输入行细节 ---------------- */
+
+/* 用户输入的命令回显（前面带 >） */
+.logline.echo .msg { color: var(--accent); }
+.logline.echo .lv { display: none; }
+
+/* ---------------- 面板折叠时控制台更宽 ---------- */
+#main.panel-collapsed #log { padding-right: 20px; }
+
+/* ---------------- 滚动到底部的提示 ---------- */
+#jumpLatest .arrow { margin-right: 4px; }

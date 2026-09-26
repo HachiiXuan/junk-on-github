@@ -1,0 +1,216 @@
+/* ==========================================================================
+   layout.css —— 顶部栏 / 控制台 / 右侧调试面板 的栅格布局
+   关键：主区是两列栅格，面板展开时"压缩"主控制台空间（需求明确要求）
+   ========================================================================== */
+
+/* ---------------- 顶部信息栏 ---------------- */
+#topbar {
+  flex: 0 0 var(--topbar-h);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 14px;
+  background: var(--bg-bar);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  z-index: 3;
+  user-select: none;
+}
+
+.map-name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--fg-bright);
+  white-space: nowrap;
+}
+.map-name .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+  vertical-align: 1px;
+}
+
+.top-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+  flex: 0 0 auto;
+}
+
+.top-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+.top-item .label { color: var(--fg-faint); font-size: 11px; }
+.top-item .value { color: var(--fg); }
+
+/* 在线人数 */
+#onlineCount .value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-dim);
+  transition: color .3s;
+}
+#onlineCount.alive .value { color: var(--accent); }
+#onlineCount.bump .value { animation: countBump .5s ease-out; }
+
+@keyframes countBump {
+  0%   { text-shadow: 0 0 0 rgba(86,211,100,0); color: var(--fg-bright); }
+  30%  { text-shadow: 0 0 10px rgba(86,211,100,.9); color: #d5ffdc; }
+  100% { text-shadow: 0 0 0 rgba(86,211,100,0); }
+}
+
+#topSpacer { flex: 1 1 auto; }
+
+.top-tools { display: flex; align-items: center; gap: 8px; }
+
+/* 折叠/展开按钮上的小标记 */
+.chip .cap { font-size: 9px; letter-spacing: .5px; }
+
+/* 沉浸模式提示（见 effects.css） */
+#immersiveHint { display: none; }
+body.immersive #immersiveHint { display: block; }
+
+/* ---------------- 主区：控制台 + 右侧面板 ---------------- */
+#main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr var(--panel-w);
+  transition: grid-template-columns .22s cubic-bezier(.4,0,.2,1);
+}
+#main.panel-collapsed { grid-template-columns: 1fr var(--panel-w-collapsed); }
+
+/* ---------------- 控制台 ---------------- */
+#consoleWrap {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background: var(--bg);
+  position: relative;
+}
+
+#log {
+  grid-row: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 14px 16px;
+  scroll-behavior: auto;      /* 平滑滚动会让人看出是网页 */
+}
+
+#inputRow {
+  grid-row: 2;
+  flex: 0 0 var(--input-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  background: var(--bg-input);
+  border-top: 1px solid var(--line);
+  position: relative;
+  z-index: 2;
+}
+.prompt {
+  color: var(--accent);
+  font-weight: 600;
+  user-select: none;
+  flex: 0 0 auto;
+}
+
+#cmdInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--fg-bright);
+  font-family: var(--font-mono);
+  font-size: var(--fs);
+  caret-color: var(--accent);
+  padding: 0;
+}
+#cmdInput::placeholder { color: #3b4742; }
+
+/* 块状光标：真实 input 的光标无法做成块状，用一个覆盖层模拟 */
+#fakeCaret {
+  position: absolute;
+  width: 7px;
+  height: 15px;
+  background: var(--accent);
+  opacity: .75;
+  pointer-events: none;
+  animation: caretBlink 1s steps(1, end) infinite;
+  display: none;
+}
+@keyframes caretBlink { 0%,49% { opacity: .75; } 50%,100% { opacity: 0; } }
+
+/* 输入行右侧的历史提示 */
+.input-hint {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--fg-faint);
+}
+
+/* ---------------- 右侧调试面板 ---------------- */
+#panel {
+  grid-column: 2;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--line);
+  overflow: hidden;
+}
+
+#main.panel-collapsed #panel {
+  grid-template-rows: 1fr;
+}
+
+/* ---------------- 回到最新 按钮 ---------------- */
+#jumpLatest {
+  position: absolute;
+  bottom: calc(var(--input-h) + 14px);
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  padding: 5px 12px;
+  background: #14201a;
+  border: 1px solid #2b3f33;
+  border-radius: 14px;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s, transform .15s;
+  z-index: 4;
+}
+#jumpLatest.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+#jumpLatest:hover { background: #1a2a22; }
+
+/* ---------------- 小屏适配 ---------------- */
+@media (max-width: 720px) {
+  :root { --panel-w: 240px; }
+  #main:not(.panel-collapsed) #log { padding-right: 8px; }
+}
+@media (max-width: 560px) {
+  #main { grid-template-columns: 1fr 0px; }
+  #main.panel-collapsed { grid-template-columns: 1fr 0px; }
+  #panel { display: none; }
+  .map-name { letter-spacing: 1px; font-size: 13px; }
+  #topbar { gap: 10px; }
+}
