@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Turn-based Chatroom</title>
+  <style>
+    :root {
+      --bg-body: #121212;
+      --bg-app: #1e1e1e;
+      --bg-header: #252525;
+      --bg-input: #2c2c2e;
+      --text-primary: #f5f5f7;
+      --text-secondary: #9e9e9e;
+      --text-tertiary: #636366;
+      --border: #38383a;
+      --accent: #0a84ff;
+      --accent-hover: #0071e3;
+      --msg-me-bg: #0a84ff;
+      --msg-me-text: #ffffff;
+      --msg-them-bg: #2c2c2e;
+      --msg-them-text: #f5f5f7;
+      --status-online-bg: #1e3a1e;
+      --status-online-text: #4ade80;
+      --status-offline-bg: #3a1e1e;
+      --status-offline-text: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-body);
+      color: var(--text-primary);
+    }
+    #app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      max-width: 640px;
+      margin: 0 auto;
+      background: var(--bg-app);
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+
+    /* 顶部栏 */
+    #header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: var(--bg-header);
+    }
+    #header .title { font-weight: 600; font-size: 15px; }
+    #header .status {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--bg-input);
+      color: var(--text-secondary);
+    }
+    #header .status.online { background: var(--status-online-bg); color: var(--status-online-text); }
+    #header .status.offline { background: var(--status-offline-bg); color: var(--status-offline-text); }
+
+    /* 匹配页 */
+    #lobby {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      gap: 16px;
+      text-align: center;
+    }
+    #lobby h2 { font-size: 18px; font-weight: 600; }
+    #lobby p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+    .room-input-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 280px;
+    }
+    .room-input-row input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-size: 16px;
+      text-align: center;
+      letter-spacing: 2px;
+      outline: none;
+    }
+    .room-input-row input::placeholder { color: var(--text-tertiary); }
+    .room-input-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,132,255,0.2); }
+    .room-input-row button {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .room-input-row button:active { background: var(--accent-hover); }
+    .room-input-row button:disabled { background: #3a3a3c; color: var(--text-tertiary); cursor: not-allowed; }
+    .hint { font-size: 12px; color: var(--text-tertiary); }
+
+    /* 聊天区 */
+    #chat {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .msg {
+      max-width: 80%;
+      padding: 8px 14px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.45;
+      word-break: break-word;
+      animation: fadeIn 0.15s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .msg.me {
+      align-self: flex-end;
+      background: var(--msg-me-bg);
+      color: var(--msg-me-text);
+      border-bottom-right-radius: 4px;
+    }
+    .msg.them {
+      align-self: flex-start;
+      background: var(--msg-them-bg);
+      color: var(--msg-them-text);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.skip {
+      align-self: center;
+      background: transparent;
+      color: var(--text-tertiary);
+      font-size: 12px;
+      padding: 2px 10px;
+    }
+
+    /* 底部输入区 */
+    #input-bar {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      padding: 10px 12px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: var(--bg-header);
+    }
+    #input-bar input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-size: 15px;
+      outline: none;
+    }
+    #input-bar input::placeholder { color: var(--text-tertiary); }
+    #input-bar input:focus { border-color: var(--accent); }
+    #input-bar input:disabled { background: #1c1c1e; color: var(--text-tertiary); }
+    #input-bar button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 22px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #send-btn { background: var(--accent); color: #fff; }
+    #send-btn:disabled { background: #3a3a3c; color: var(--text-tertiary); cursor: not-allowed; }
+    #skip-btn { background: var(--bg-input); color: var(--text-primary); }
+    #skip-btn:disabled { background: #1c1c1e; color: var(--text-tertiary); cursor: not-allowed; }
+    #input-bar button:active:not(:disabled) { opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部栏 -->
+    <div id="header">
+      <span class="title">Turn-based Chatroom</span>
+      <span class="status" id="status">未连接</span>
+    </div>
+
+    <!-- 匹配页 -->
+    <div id="lobby">
+      <h2>输入相同号码即可配对</h2>
+      <p>你和对方在各自设备上输入完全相同的号码，点击连接，即可建立 P2P 通道。</p>
+      <div class="room-input-row">
+        <input type="text" id="room-input" placeholder="例如 1234" maxlength="12" inputmode="numeric">
+        <button id="connect-btn">连接</button>
+      </div>
+      <div class="hint" id="lobby-hint">号码仅用于建立连接，不会上传到任何服务器</div>
+    </div>
+
+    <!-- 聊天区 -->
+    <div id="chat">
+      <div id="messages"></div>
+      <div id="input-bar">
+        <input type="text" id="msg-input" placeholder="输入消息..." autocomplete="off">
+        <button id="skip-btn" title="跳过本回合">跳过</button>
+        <button id="send-btn">发送</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@1/dist/peerjs.min.js"></script>
+  <script>
+    // ==================== 状态 ====================
+    let peer = null;          // PeerJS 实例
+    let conn = null;          // DataConnection
+    let myTurn = false;       // 是否轮到我发言
+    let connected = false;    // 是否已连接
+    let myRole = null;        // 'host' 或 'guest'
+
+    // ==================== DOM ====================
+    const lobbyEl = document.getElementById('lobby');
+    const chatEl = document.getElementById('chat');
+    const messagesEl = document.getElementById('messages');
+    const roomInput = document.getElementById('room-input');
+    const connectBtn = document.getElementById('connect-btn');
+    const msgInput = document.getElementById('msg-input');
+    const sendBtn = document.getElementById('send-btn');
+    const skipBtn = document.getElementById('skip-btn');
+    const statusEl = document.getElementById('status');
+    const lobbyHint = document.getElementById('lobby-hint');
+
+    // ==================== 工具函数 ====================
+    function setStatus(text, type) {
+      statusEl.textContent = text;
+      statusEl.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function addMessage(text, who) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + (who === 'me' ? 'me' : who === 'them' ? 'them' : 'skip');
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function updateTurnUI() {
+      if (!connected) {
+        msgInput.disabled = true;
+        sendBtn.disabled = true;
+        skipBtn.disabled = true;
+        return;
+      }
+      if (myTurn) {
+        msgInput.disabled = false;
+        sendBtn.disabled = false;
+        skipBtn.disabled = false;
+        msgInput.placeholder = '轮到你发言...';
+        msgInput.focus();
+      } else {
+        msgInput.disabled = true;
+        sendBtn.disabled = true;
+        skipBtn.disabled = true;
+        msgInput.placeholder = '等待对方...';
+      }
+    }
+
+    function switchTurn() {
+      myTurn = !myTurn;
+      updateTurnUI();
+    }
+
+    // ==================== 连接逻辑 ====================
+    connectBtn.addEventListener('click', () => {
+      const roomId = roomInput.value.trim();
+      if (!roomId) {
+        lobbyHint.textContent = '请输入号码';
+        return;
+      }
+      if (!/^[a-zA-Z0-9_-]{1,12}$/.test(roomId)) {
+        lobbyHint.textContent = '号码只能包含字母、数字、- 和 _，长度 1-12';
+        return;
+      }
+
+      connectBtn.disabled = true;
+      lobbyHint.textContent = '正在连接...';
+
+      // 尝试作为 host：用号码当自己的 peer ID
+      peer = new Peer('rm' + roomId, {
+        debug: 0,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+
+      peer.on('open', () => {
+        myRole = 'host';
+        lobbyHint.textContent = '等待对方加入...';
+        setStatus('等待对方', 'offline');
+      });
+
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+          peer.destroy();
+          startAsGuest(roomId);
+        } else {
+          lobbyHint.textContent = '连接出错：' + err.type;
+          connectBtn.disabled = false;
+        }
+      });
+
+      peer.on('connection', (incomingConn) => {
+        conn = incomingConn;
+        setupConnection();
+      });
+    });
+
+    function startAsGuest(roomId) {
+      myRole = 'guest';
+      peer = new Peer({
+        debug: 0,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
+
+      peer.on('open', () => {
+        lobbyHint.textContent = '正在连接对方...';
+        conn = peer.connect('rm' + roomId, { reliable: true });
+        setupConnection();
+      });
+
+      peer.on('error', (err) => {
+        lobbyHint.textContent = '连接失败：' + err.type;
+        connectBtn.disabled = false;
+      });
+    }
+
+    function setupConnection() {
+      conn.on('open', () => {
+        connected = true;
+        lobbyEl.style.display = 'none';
+        chatEl.style.display = 'flex';
+        setStatus('已连接', 'online');
+
+        if (myRole === 'host') {
+          myTurn = true;
+          updateTurnUI();
+          addMessage('你先发言', 'skip');
+        } else {
+          myTurn = false;
+          updateTurnUI();
+        }
+      });
+
+      conn.on('data', (data) => {
+        if (data.type === 'msg') {
+          addMessage(data.text, 'them');
+          switchTurn();
+        } else if (data.type === 'skip') {
+          addMessage('对方跳过了本回合', 'skip');
+          switchTurn();
+        }
+      });
+
+      conn.on('close', () => {
+        connected = false;
+        setStatus('连接已断开', 'offline');
+        updateTurnUI();
+        addMessage('对方已断开连接', 'skip');
+      });
+
+      conn.on('error', (err) => {
+        console.error('Connection error:', err);
+      });
+    }
+
+    // ==================== 发送消息 ====================
+    function sendMessage() {
+      const text = msgInput.value.trim();
+      if (!text || !myTurn || !conn || !conn.open) return;
+
+      conn.send({ type: 'msg', text: text });
+      addMessage(text, 'me');
+      msgInput.value = '';
+      switchTurn();
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // ==================== 跳过 ====================
+    skipBtn.addEventListener('click', () => {
+      if (!myTurn || !conn || !conn.open) return;
+      conn.send({ type: 'skip' });
+      addMessage('你跳过了本回合', 'skip');
+      switchTurn();
+    });
+
+    // ==================== 清理 ====================
+    window.addEventListener('beforeunload', () => {
+      if (conn) conn.close();
+      if (peer) peer.destroy();
+    });
+
+    roomInput.focus();
+  </script>
+</body>
+</html>
