@@ -1,0 +1,11 @@
+{
+  "name": { "en": "STEEL//RHYTHM", "zh": "钢铁节奏机" },
+  "desc": {
+    "en": "An industrial rhythm machine powered by Web Audio API. Add metal/steel sound effects, loop them, tweak intervals, watch the spectrum, and export your mix as WAV.",
+    "zh": "用 Web Audio API 打造的工业节奏机。添加金属/钢铁音效，循环播放，调整间隔，实时频谱可视化，并可导出 WAV。"
+  },
+  "tags": ["Audio", "Industrial", "Tool"],
+  "category": "tool",
+  "color": ["#ff6a1a", "#7a3410"],
+  "order": 10
+}
