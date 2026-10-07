@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0b0d16">
+<title>Voice Changer</title>
+<link rel="stylesheet" href="css/style.css">
+<script>
+/* 尽早检测语言：默认英文 → 检测浏览器语言 → 自动切换 */
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('vc_lang'); } catch (e) {}
+  var raw = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+  var auto = raw.indexOf('zh') === 0 ? 'zh' : 'en';
+  window.__INITIAL_LANG__ = saved || auto;
+  document.documentElement.lang = window.__INITIAL_LANG__;
+})();
+</script>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ 左侧：预设 + 语言切换 ============ -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-row">
+        <h1 data-i18n="appTitle">🎙️ Voice Changer · Presets</h1>
+        <button class="lang-btn" id="langBtn" type="button" title="Switch language">
+          <span id="langLabel">EN</span>
+        </button>
+      </div>
+      <p data-i18n="appSubtitle">Click any preset to apply</p>
+    </div>
+    <div class="preset-list" id="presetList"></div>
+  </aside>
+
+  <!-- ============ 右侧：主面板 ============ -->
+  <main class="content">
+
+    <!-- 1. 上传 / 录音 -->
+    <section class="card">
+      <h2 data-i18n="sectionUpload">1 · Upload Audio</h2>
+
+      <div class="drop" id="dropZone">
+        <span class="big">📂</span>
+        <div class="t1" data-i18n="dropTitle">Click to choose, or drop an audio file here</div>
+        <div class="t2" data-i18n="dropSubtitle">Supports MP3 / WAV / OGG / M4A / FLAC</div>
+      </div>
+      <input type="file" id="fileInput" accept="audio/*" hidden>
+
+      <div class="or-divider"><span data-i18n="orText">or</span></div>
+
+      <div class="record-row">
+        <button class="btn record-btn" id="recordBtn" type="button">
+          <span class="rec-dot"></span>
+          <span id="recordLabel" data-i18n="btnRecord">Record</span>
+        </button>
+        <span class="record-time" id="recordTime"></span>
+      </div>
+
+      <div class="status" id="status">
+        <span class="spinner"></span>
+        <span id="statusText" data-i18n="statusWaiting">Waiting for audio…</span>
+      </div>
+    </section>
+
+    <!-- 2. 试听与导出 -->
+    <section class="card">
+      <h2 data-i18n="sectionExport">2 · Preview &amp; Export</h2>
+
+      <div class="btn-row">
+        <button class="btn" id="playProcessedBtn" type="button" disabled>
+          <span data-i18n="btnPlayProcessed">▶️ Play Processed</span>
+        </button>
+        <button class="btn" id="playOriginalBtn" type="button" disabled>
+          <span data-i18n="btnPlayOriginal">▶️ Play Original</span>
+        </button>
+        <button class="btn" id="stopBtn" type="button" disabled>
+          <span data-i18n="btnStop">⏹ Stop</span>
+        </button>
+      </div>
+
+      <div class="export-row">
+        <span class="export-label" data-i18n="exportFormat">Format</span>
+        <div class="seg" id="formatSeg">
+          <button class="seg-item active" data-format="mp3" type="button">MP3</button>
+          <button class="seg-item" data-format="wav" type="button">WAV</button>
+        </div>
+        <button class="btn primary" id="downloadBtn" type="button" disabled>
+          <span data-i18n="btnDownload">⬇️ Export</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 3. 具体数据 -->
+    <section class="card">
+      <h2 data-i18n="sectionData">3 · Audio Info</h2>
+      <div class="meta">
+        <span class="chip"><span data-i18n="metaFile">File:&nbsp;</span><b id="mName">—</b></span>
+        <span class="chip"><span data-i18n="metaDuration">Duration:&nbsp;</span><b id="mDur">—</b></span>
+        <span class="chip"><span data-i18n="metaSampleRate">Sample Rate:&nbsp;</span><b id="mRate">—</b></span>
+        <span class="chip"><span data-i18n="metaChannels">Channels:&nbsp;</span><b id="mCh">—</b></span>
+        <span class="chip"><span data-i18n="metaSize">Output Size:&nbsp;</span><b id="mSize">—</b></span>
+      </div>
+      <div class="params" id="params"></div>
+    </section>
+
+    <!-- 4. 波形（可拖拽进度条） -->
+    <section class="card">
+      <h2 data-i18n="sectionWave">4 · Waveform</h2>
+      <div class="wave-wrap">
+        <canvas id="wave"></canvas>
+      </div>
+      <div class="wave-bottom">
+        <div class="wave-legend">
+          <span class="l1"><i></i><span data-i18n="legendPlayed">Played</span></span>
+          <span class="l2"><i></i><span data-i18n="legendRemaining">Remaining</span></span>
+        </div>
+        <span class="wave-time" id="timeDisplay">0:00 / 0:00</span>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- lamejs（MP3 编码，CDN 加载失败会自动降级为 WAV） -->
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/presets.js"></script>
+<script src="js/audio-engine.js"></script>
+<script src="js/waveform.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

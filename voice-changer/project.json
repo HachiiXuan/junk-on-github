@@ -1,0 +1,11 @@
+{
+  "name": { "en": "Voice Changer", "zh": "变声器" },
+  "desc": {
+    "en": "Upload or record audio, tweak pitch and effects with 24 presets, and export as MP3 or WAV. Waveform seekbar, bilingual UI.",
+    "zh": "上传或录制音频，用 24 种预设调节音高与音效，导出 MP3 或 WAV。支持波形拖拽进度条和中英双语界面。"
+  },
+  "tags": ["Web Audio", "Canvas", "Tool", "Effects"],
+  "category": "tool",
+  "color": ["#3ee0c8", "#7c5cff"],
+  "order": 10
+}
