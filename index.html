@@ -9,9 +9,8 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
 <style>
 /* ============================================================================
-   Junk on GitHub — project index page
-   Single self-contained file. No build step, no dependencies, no external CSS.
-   Edit the FALLBACK_PROJECTS array near the bottom to change names/descriptions.
+   Junk on GitHub — project index page (Simplified)
+   No build step, no dependencies.
    ==========================================================================*/
 
 :root{
@@ -46,7 +45,6 @@ body{
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
 }
-/* ambient background */
 body::before{
   content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
   background:
@@ -161,18 +159,6 @@ h1 .grad{
   border:1px solid var(--line);border-radius:5px;padding:.05rem .34rem;margin-left:.2rem;
 }
 
-.filters{display:flex;flex-wrap:wrap;gap:.42rem}
-.chip{
-  appearance:none;font-family:inherit;font-size:.79rem;font-weight:560;
-  color:var(--muted);background:var(--panel);border:1px solid var(--line);
-  border-radius:999px;padding:.36rem .78rem;cursor:pointer;
-  display:inline-flex;align-items:center;gap:.4rem;transition:all .16s;
-}
-.chip:hover{color:var(--text);border-color:var(--line-2)}
-.chip[aria-pressed="true"]{color:#fff;background:rgba(139,92,246,.28);border-color:rgba(139,92,246,.62)}
-.chip i{font-style:normal;font-family:var(--mono);font-size:.7rem;color:var(--muted-2)}
-.chip[aria-pressed="true"] i{color:rgba(255,255,255,.7)}
-
 .sync{
   display:inline-flex;align-items:center;gap:.4rem;margin-left:auto;
   font-family:var(--mono);font-size:.72rem;color:var(--muted-2);white-space:nowrap;
@@ -240,7 +226,6 @@ h1 .grad{
   text-transform:uppercase;color:#04121a;background:#67e8f9;
   border-radius:999px;padding:.16rem .5rem;box-shadow:0 3px 12px -3px rgba(103,232,249,.9);
 }
-/* project has no project.json: title/description were guessed from its own page */
 .badge-auto{
   color:#f5f3ff;background:rgba(24,18,42,.72);
   border:1px solid rgba(196,181,253,.45);backdrop-filter:blur(6px);
@@ -278,15 +263,7 @@ h1 .grad{
   border:1px dashed var(--line-2);border-radius:var(--radius);background:rgba(255,255,255,.02);
 }
 .empty b{display:block;color:var(--text);font-size:1.05rem;margin-bottom:.4rem}
-
-/* ───────────────────────── footnotes ───────────────────────── */
-.note{
-  margin-top:2.4rem;padding:1.05rem 1.15rem;border-radius:var(--radius-s);
-  background:rgba(255,255,255,.028);border:1px solid var(--line);
-  font-size:.8rem;color:var(--muted-2);line-height:1.7;
-}
-.note b{color:var(--muted);font-weight:620}
-.note code{font-family:var(--mono);font-size:.76rem;color:#c4b5fd;background:rgba(139,92,246,.12);border-radius:5px;padding:.06rem .34rem}
+.empty a{color:var(--accent-2);text-decoration:none;border-bottom:1px dotted var(--accent-2)}
 
 footer{
   margin-top:2.6rem;padding:1.6rem 0 2.6rem;border-top:1px solid var(--line);
@@ -358,8 +335,6 @@ footer a:hover{color:var(--text)}
       <span><b id="statCount">—</b> <span data-i18n="statProjects">projects</span></span>
       <span class="sep">/</span>
       <span><b id="statHost">github.io</b></span>
-      <span class="sep">/</span>
-      <span id="statStamp" data-i18n="statSyncing">syncing…</span>
     </div>
   </section>
 
@@ -368,7 +343,6 @@ footer a:hover{color:var(--text)}
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
       <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search projects…" aria-label="Search projects">
     </label>
-    <div class="filters" id="filters" role="group" aria-label="Filter"></div>
     <div class="sync" id="sync" data-state="loading">
       <span class="sdot"></span>
       <span id="syncText" data-i18n="syncLoading">checking repository…</span>
@@ -377,8 +351,6 @@ footer a:hover{color:var(--text)}
   </div>
 
   <section class="grid" id="grid" aria-live="polite" aria-busy="true"></section>
-
-  <div class="note" id="note" role="status"></div>
 
   <footer>
     <span><span data-i18n="footMade">Junk on GitHub — a personal dumping ground.</span></span>
@@ -401,84 +373,23 @@ footer a:hover{color:var(--text)}
   "use strict";
 
   /* ==========================================================================
-     1. CONFIG — change these two lines if you rename the repository
+     1. CONFIG
      ========================================================================== */
   var OWNER  = "HachiiXuan";
   var REPO   = "junk-on-github";
-  var BRANCH = "main";          // branch GitHub Pages builds from
-  var SELF   = "";              // set to a folder name to hide it from the grid (this file lives in the repo root, so nothing to hide)
+  var BRANCH = "main";
+  var SELF   = "";
 
   var PAGES_BASE = "https://" + OWNER.toLowerCase() + ".github.io/" + REPO + "/";
   var GITHUB_URL = "https://github.com/" + OWNER + "/" + REPO;
 
-  var CACHE_KEY = "jog.index.cache.v1";
-  var CACHE_MS  = 10 * 60 * 1000;   // reuse a successful scan for 10 minutes
+  var CACHE_KEY = "jog.index.cache.v2";
+  var CACHE_MS  = 10 * 60 * 1000;
   var API_TIMEOUT = 9000;
   var META_TIMEOUT = 7000;
 
   /* ==========================================================================
-     2. FALLBACK_PROJECTS
-        Used for names, descriptions, colours and ordering.
-        If the repository scan succeeds, any project that no longer exists on
-        GitHub is dropped; any new folder with an index.html is appended
-        automatically. So this list never has to be kept perfectly in sync.
-        `dir` must match the folder name in the repository.
-     ========================================================================== */
-  var FALLBACK_PROJECTS = [
-    {
-      dir: "ah-cube",
-      name: { en: "Analog Horror — Cube", zh: "模拟恐怖 · 方块" },
-      desc: {
-        en: "A mockumentary simulation observing a creature I saw in my dream.",
-        zh: "模拟伪纪录片，观察我梦到的生物。"
-      },
-      tags: ["Analog Horror", "Narration", "WebGL"],
-      kind: "game", c1: "#0ea5e9", c2: "#4f46e5"
-    },
-    {
-      dir: "ah-tornado",
-      name: { en: "Analog Horror — Tornado", zh: "模拟恐怖 · 龙卷风" },
-      desc: {
-        en: "A simulation of an emergency broadcast system warning about a tornado. Warning: contains flashing imagery and voice narration.",
-        zh: "模拟紧急广播系统发布的龙卷风警报。（含频闪画面与语音播报）"
-      },
-      tags: ["Analog Horror", "WebGL", "Interactive"],
-      kind: "game", c1: "#7c3aed", c2: "#ec4899"
-    },
-    {
-      dir: "probe",
-      name: { en: "Probe", zh: "探针" },
-      desc: {
-        en: "Disguised as a remote upload of user device features, meant to prank non-tech-savvy friends. This webpage actually contains no remote connections.",
-        zh: "伪装成用户设备特征被远程上传，用来对不懂技术的朋友进行恶作剧，该网页实际不含任何远程连接。"
-      },
-      tags: ["Prank", "Canvas", "No network"],
-      kind: "game", c1: "#22d3ee", c2: "#0d9488"
-    },
-    {
-      dir: "mystic-foundry",
-      name: { en: "Mystic Foundry", zh: "秘法熔炉" },
-      desc: {
-        en: "A Three.js magic sandbox: combine cores, cast spells, tune bloom and effects in a live settings panel.",
-        zh: "Three.js 魔法沙盒：组合法术核心、施放法术，并实时调整泛光与特效参数。"
-      },
-      tags: ["Three.js", "WebGL", "Sandbox"],
-      kind: "game", c1: "#8b5cf6", c2: "#3b82f6"
-    },
-    {
-      dir: "wukong-prime-sim",
-      name: { en: "Wukong Prime Sim", zh: "WukongPrime 模拟器" },
-      desc: {
-        en: "A gameplay in Warframe: endless waves, a boss, and settings for range, Steel Path and clone summoning. I love Warframe <3",
-        zh: "在 Warframe 中的一个玩法：无尽刷怪、BOSS 战，可调攻击范围、钢铁之路与分身召唤。我爱 Warframe <3"
-      },
-      tags: ["Warframe", "Canvas", "Boss"],
-      kind: "game", c1: "#f59e0b", c2: "#ef4444"
-    }
-  ];
-
-  /* ==========================================================================
-     3. UI STRINGS
+     2. UI STRINGS
      ========================================================================== */
   var STRINGS = {
     en: {
@@ -490,31 +401,21 @@ footer a:hover{color:var(--text)}
       h1b: "in one page.",
       lede: "Boring projects generated by AI. If you ask me what they are for — nothing. That's it. They are hosted here so I can reach my junk anytime, anywhere.",
       statProjects: "projects",
-      statSyncing: "syncing…",
-      statSynced: "synced {t}",
-      statOffline: "offline list",
-      statError: "scan failed",
       search: "Search projects…",
       searchAria: "Search projects",
-      filterAll: "All",
-      filterGame: "Games",
-      filterTool: "Experiments",
-      filterWebgl: "WebGL",
-      filterCanvas: "Canvas",
       play: "Open",
       syncLoading: "checking repository…",
-      syncLive: "live · {n} found",
-      syncCached: "cached · {n} found",
-      syncOffline: "GitHub unreachable — built-in list",
-      syncError: "scan failed — built-in list",
+      syncLive: "auto-detected · {n} found",
+      syncCached: "auto-detected (cached) · {n} found",
+      syncOffline: "offline · check network",
+      syncError: "scan failed · check network",
       syncRefresh: "refresh",
       emptyTitle: "No matches",
       emptyBody: "Nothing matches “{q}” here. Try another word or clear the search.",
       emptyAllTitle: "Nothing here yet",
       emptyAllBody: "Push a folder that contains an index.html into the repository root and it will show up on this page. Add a project.json inside it to control its title, description, tags and category.",
-      noteLive: "<b>Auto-detected.</b> Folders are read live from the <code>{repo}</code> repository: every root folder containing an <code>index.html</code> becomes a card. Each card's title, description, tags and category come from that project's own <code>project.json</code>; if there is none, this page falls back to its <code>README.md</code>, then to its <code>&lt;title&gt;</code> / <code>meta description</code>. A card marked <b>auto</b> has no <code>project.json</code> yet, so its text was guessed from its own page. If GitHub cannot be reached, the built-in list is used instead.",
-      noteCached: "<b>Auto-detected (cached).</b> This list was read from the <code>{repo}</code> repository a few minutes ago and is being reused to stay under GitHub's rate limit. Hit <code>refresh</code> to scan again.",
-      noteOffline: "<b>Showing the built-in list.</b> GitHub could not be reached from this browser (offline, blocked, or rate-limited), so the page is using the project list embedded in it. All links still work.",
+      errorTitle: "Cannot connect to GitHub",
+      errorBody: "Please check your network connection, or visit the repository directly: ",
       footMade: "Junk on GitHub — a personal dumping ground.",
       footReadme: "Readme (my index)",
       footSource: "Source & games",
@@ -531,31 +432,21 @@ footer a:hover{color:var(--text)}
       h1b: "都在这一个页面里。",
       lede: "使用 AI 生产的无聊项目。如果你问我它们有什么用——没有用，就这么简单。托管在这里，让我随时随地访问我的垃圾。",
       statProjects: "个项目",
-      statSyncing: "同步中…",
-      statSynced: "已同步 {t}",
-      statOffline: "离线列表",
-      statError: "扫描失败",
       search: "搜索项目…",
       searchAria: "搜索项目",
-      filterAll: "全部",
-      filterGame: "游戏",
-      filterTool: "实验",
-      filterWebgl: "WebGL",
-      filterCanvas: "Canvas",
       play: "打开",
       syncLoading: "正在检查仓库…",
-      syncLive: "实时 · 找到 {n} 个",
-      syncCached: "缓存 · 找到 {n} 个",
-      syncOffline: "连不上 GitHub — 使用内置列表",
-      syncError: "扫描失败 — 使用内置列表",
+      syncLive: "自动检测 · 找到 {n} 个",
+      syncCached: "自动检测（缓存）· 找到 {n} 个",
+      syncOffline: "离线 · 请检查网络",
+      syncError: "扫描失败 · 请检查网络",
       syncRefresh: "刷新",
       emptyTitle: "没有匹配的项目",
       emptyBody: "这里没有和“{q}”匹配的内容。换个词，或者清空搜索。",
       emptyAllTitle: "这里还什么都没有",
       emptyAllBody: "往仓库根目录推一个含 index.html 的文件夹，它就会自动出现在这个页面上。在文件夹里放一个 project.json，就能自己控制标题、简介、标签和分类。",
-      noteLive: "<b>自动检测。</b>文件夹是实时从 <code>{repo}</code> 仓库读取的：根目录下每个含 <code>index.html</code> 的文件夹都会变成一张卡片。卡片的标题、简介、标签和分类来自该项目自己的 <code>project.json</code>；没有这个文件时，依次回退到它的 <code>README.md</code>，再回退到它页面的 <code>&lt;title&gt;</code> / <code>meta description</code>。带 <b>auto</b> 角标的卡片还没有 <code>project.json</code>，文字是从它自己页面猜的。连不上 GitHub 时改用内置列表。",
-      noteCached: "<b>自动检测（缓存）。</b>这份列表是几分钟前从 <code>{repo}</code> 仓库读取的，为了不超过 GitHub 的请求频率限制而直接复用。点 <code>刷新</code> 可以重新扫描。",
-      noteOffline: "<b>当前显示内置列表。</b>这个浏览器连不上 GitHub（离线、被拦截或触发限流），所以页面用了内置的项目列表。所有链接依然可用。",
+      errorTitle: "无法连接到 GitHub",
+      errorBody: "请检查您的网络连接，或者直接访问仓库： ",
       footMade: "Junk on GitHub — 一个私人垃圾场。",
       footReadme: "README（我的原版索引）",
       footSource: "源码与游戏",
@@ -566,7 +457,7 @@ footer a:hover{color:var(--text)}
   };
 
   /* ==========================================================================
-     4. LANGUAGE — default English, switch to Chinese when the browser is zh-*
+     3. LANGUAGE
      ========================================================================== */
   var LS_LANG = "jog.lang";
   var lang = "en";
@@ -590,7 +481,6 @@ footer a:hover{color:var(--text)}
       var tag = String(list[i] || "").toLowerCase();
       if (!tag) continue;
       if (tag.indexOf("zh") === 0 || tag.indexOf("cn") === 0) return "zh";
-      // first recognizable language wins: if it is not Chinese, stay English
       if (/^[a-z]{2}/.test(tag)) return "en";
     }
     return "en";
@@ -608,7 +498,7 @@ footer a:hover{color:var(--text)}
   }
 
   /* ==========================================================================
-     5. DATA ACCESS
+     4. DATA ACCESS
      ========================================================================== */
   function fetchWithTimeout(url, ms) {
     var ctrl = ("AbortController" in window) ? new AbortController() : null;
@@ -625,6 +515,10 @@ footer a:hover{color:var(--text)}
     });
   }
 
+  /* ------------------------------------------------------------------
+     缓存现在保存的是完整的项目列表（含 name/desc/tags），
+     所以在缓存命中时可以直接渲染出完整卡片，不再退化成只有文件夹名。
+     ------------------------------------------------------------------ */
   function readCache() {
     try {
       var raw = sessionStorage.getItem(CACHE_KEY);
@@ -635,14 +529,36 @@ footer a:hover{color:var(--text)}
       return obj;
     } catch (e) { return null; }
   }
+
   function writeCache(list) {
-    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), list: list })); } catch (e) {}
+    var slim = list.map(function (p) {
+      return {
+        dir: p.dir,
+        name: p.name || null,
+        desc: p.desc || null,
+        tags: p.tags || [],
+        kind: p.kind || "",
+        c1: p.c1 || "",
+        c2: p.c2 || "",
+        order: (p.order == null ? null : p.order),
+        isNew: !!p.isNew,
+        source: p.source || "",
+        url: p.url || "",
+        pageTitle: p.pageTitle || "",
+        pageDesc: p.pageDesc || ""
+      };
+    });
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), list: slim }));
+    } catch (e) {
+      // 极端情况下 sessionStorage 满了：静默失败，不影响页面
+    }
   }
+
   function clearCache() {
     try { sessionStorage.removeItem(CACHE_KEY); } catch (e) {}
   }
 
-  /* Try the authenticated-free endpoints in order; first usable tree wins. */
   function fetchTree() {
     var urls = [
       "https://api.github.com/repos/" + OWNER + "/" + REPO + "/git/trees/" + BRANCH + "?recursive=1",
@@ -668,7 +584,6 @@ footer a:hover{color:var(--text)}
         if (n && typeof n.path === "string") files.push(n.path);
       }
     } else if (data && Object.prototype.toString.call(data) === "[object Array]") {
-      // jsDelivr flat listing: {"type":"directory","name":"x"} entries
       for (var j = 0; j < data.length; j++) {
         var e = data[j];
         if (e && typeof e.name === "string" && (e.type === "directory" || e.type === "file")) {
@@ -682,8 +597,8 @@ footer a:hover{color:var(--text)}
   function toProjects(files) {
     var SKIP = {};
     SKIP[SELF] = 1; SKIP[".github"] = 1; SKIP["node_modules"] = 1; SKIP["covers"] = 1; SKIP["assets"] = 1;
-    var dirs = {};          // dir -> true
-    var hasIndex = {};      // dir -> true
+    var dirs = {};
+    var hasIndex = {};
     for (var i = 0; i < files.length; i++) {
       var p = files[i];
       if (!p || p.charAt(0) === ".") continue;
@@ -702,16 +617,8 @@ footer a:hover{color:var(--text)}
 
   /* ==========================================================================
      PER-PROJECT METADATA
-     For every project folder this page tries, in order:
-       1. <dir>/project.json   <- the file you are meant to maintain
-       2. <dir>/README.md      <- loose fallback, parsed as markdown
-       3. <dir>/index.html     <- <title> / <meta name="description">
-     Whatever it finds wins over the built-in list below, so new projects
-     describe themselves and this file never needs editing again.
      ========================================================================== */
   function fetchText(url) {
-    // cache: "no-store" matters here — without it the browser may serve an old
-    // project.json after you edit and push it
     var ctrl = ("AbortController" in window) ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, META_TIMEOUT);
     var opts = { cache: "no-store" };
@@ -725,8 +632,6 @@ footer a:hover{color:var(--text)}
 
   function readMeta(dir) {
     var base = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/" + BRANCH + "/" + dir + "/";
-    // tried in order and stopped at the first source that yields anything, so a
-    // fully documented project costs one request and an undocumented one costs three
     return fetchText(base + "project.json")
       .then(function (txt) {
         var j = parseProjectJson(txt);
@@ -760,7 +665,6 @@ footer a:hover{color:var(--text)}
 
   function normalise(o) {
     var out = { tags: [], kind: "", c1: "", c2: "", order: null, hidden: !!o.hidden };
-    // names/descriptions are kept bilingual when given as { en, zh }
     out.name = asBilingual(o.name) || asBilingual(o.title);
     out.desc = asBilingual(o.desc) || asBilingual(o.description);
     if (Object.prototype.toString.call(o.tags) === "[object Array]") {
@@ -774,12 +678,10 @@ footer a:hover{color:var(--text)}
       out.c1 = String(o.color[0]); out.c2 = String(o.color[1]);
     }
     if (o.order != null && isFinite(Number(o.order))) out.order = Number(o.order);
-    // ignore anything that is not an http(s) link, so a bad value cannot inject javascript:
     if (typeof o.url === "string" && /^https?:\/\//i.test(o.url.trim())) out.url = o.url.trim();
     return out;
   }
 
-  /* "text" -> { en: "text", zh: "text" } ; { en, zh } -> cleaned copy */
   function asBilingual(v) {
     if (v == null) return null;
     if (typeof v === "string") { var s = clean(v); return s ? { en: s, zh: s } : null; }
@@ -792,7 +694,6 @@ footer a:hover{color:var(--text)}
     return Object.keys(out).length ? out : null;
   }
 
-  /* Best language match for a {en, zh, ...} object; falls back to en, then any. */
   function pickLang(v) {
     if (typeof v === "string") return clean(v);
     if (!v || typeof v !== "object") return "";
@@ -838,16 +739,12 @@ footer a:hover{color:var(--text)}
     return out;
   }
 
-  /* Reads <meta name="description" content="..."> in either attribute order.
-     The content pattern accepts an escaped \" so a multi-line or quoted
-     description cannot silently truncate the value. */
   function attr(html, key, value) {
     var tagRe = /<meta\b[^>]*>/gi, tag;
     while ((tag = tagRe.exec(html))) {
       var t = tag[0];
       if (!new RegExp(key + "\\s*=\\s*[\"']" + value + "[\"']", "i").test(t)) continue;
       var c = t.match(/content\s*=\s*"((?:\\.|[^"\\])*)"/i) || t.match(/content\s*=\s*'((?:\\.|[^'\\])*)'/i);
-      // no content attribute -> fall back to the first quoted value after content=
       if (!c) c = t.match(/content\s*=\s*([^"'\s>]+)/i);
       if (c && c[1]) return c[1].replace(/\\(["'])/g, "$1");
     }
@@ -868,21 +765,22 @@ footer a:hover{color:var(--text)}
   }
 
   /* ==========================================================================
-     6. STATE
+     5. STATE
      ========================================================================== */
   var state = {
-    list: [],            // rendered projects
-    filter: "all",
+    list: [],
     q: "",
-    status: "loading",   // loading | live | cached | offline | error
-    stamp: null
+    status: "loading" // loading | live | cached | error
   };
 
+  // 每次 load 自增；后台刷新完成时比对，防止过期的刷新结果覆盖用户主动触发的新扫描
+  var loadEpoch = 0;
+
   var $ = function (id) { return document.getElementById(id); };
-  var grid, filtersEl, qEl, syncEl, syncTextEl, noteEl, statCountEl, statStampEl, statHostEl;
+  var grid, qEl, syncEl, syncTextEl, statCountEl, statHostEl;
 
   /* ==========================================================================
-     7. RENDER
+     6. RENDER
      ========================================================================== */
   function projectTitle(p) {
     if (p.name && p.name[lang]) return p.name[lang];
@@ -914,20 +812,8 @@ footer a:hover{color:var(--text)}
             (p.tags || []).join(" ")].join(" ").toLowerCase();
   }
   function matches(p) {
-    if (state.filter !== "all") {
-      if (state.filter === "webgl" || state.filter === "canvas") {
-        if (!hasTag(p, state.filter)) return false;
-      } else if (p.kind !== state.filter) return false;
-    }
     if (state.q && searchBlob(p).indexOf(state.q) === -1) return false;
     return true;
-  }
-  function hasTag(p, want) {
-    var tags = p.tags || [];
-    for (var i = 0; i < tags.length; i++) {
-      if (String(tags[i]).toLowerCase().indexOf(want) !== -1) return true;
-    }
-    return false;
   }
 
   function el(tag, cls, text) {
@@ -949,7 +835,7 @@ footer a:hover{color:var(--text)}
     var cover = el("div", "cover");
     cover.appendChild(el("span", "initial", initialOf(p)));
     cover.appendChild(el("span", "slug", p.dir));
-    var badge = p.source === "auto" ? T("autoBadge") : (p.isNew ? T("newBadge") : (p.source === "readme" ? "" : ""));
+    var badge = p.source === "auto" ? T("autoBadge") : (p.isNew ? T("newBadge") : "");
     if (badge) cover.appendChild(el("span", "badge-new" + (p.source === "auto" ? " badge-auto" : ""), badge));
     a.appendChild(cover);
 
@@ -978,52 +864,34 @@ footer a:hover{color:var(--text)}
     return a;
   }
 
-  function renderFilters() {
-    var counts = { all: state.list.length, game: 0, tool: 0, webgl: 0, canvas: 0 };
-    state.list.forEach(function (p) {
-      if (p.kind === "game") counts.game++;
-      if (p.kind === "tool") counts.tool++;
-      if (hasTag(p, "webgl")) counts.webgl++;
-      if (hasTag(p, "canvas")) counts.canvas++;
-    });
-    var defs = [];
-    defs.push(["all", T("filterAll"), counts.all]);
-    if (counts.game) defs.push(["game", T("filterGame"), counts.game]);
-    if (counts.tool) defs.push(["tool", T("filterTool"), counts.tool]);
-    if (counts.webgl) defs.push(["webgl", T("filterWebgl"), counts.webgl]);
-    if (counts.canvas) defs.push(["canvas", T("filterCanvas"), counts.canvas]);
-
-    filtersEl.textContent = "";
-    defs.forEach(function (d) {
-      var b = el("button", "chip");
-      b.type = "button";
-      b.setAttribute("aria-pressed", state.filter === d[0] ? "true" : "false");
-      b.appendChild(document.createTextNode(d[1]));
-      b.appendChild(el("i", null, String(d[2])));
-      b.addEventListener("click", function () {
-        state.filter = d[0];
-        renderFilters();
-        renderGrid();
-      });
-      filtersEl.appendChild(b);
-    });
-  }
-
   function renderGrid() {
     var shown = state.list.filter(matches);
     grid.textContent = "";
     grid.setAttribute("aria-busy", "false");
 
-    if (!shown.length) {
+    if (state.status === "error") {
       var box = el("div", "empty");
-      if (state.list.length === 0) {
-        box.appendChild(el("b", null, T("emptyAllTitle")));
-        box.appendChild(document.createTextNode(T("emptyAllBody")));
-      } else {
-        box.appendChild(el("b", null, T("emptyTitle")));
-        box.appendChild(document.createTextNode(fmt(T("emptyBody"), { q: state.q || "—" })));
-      }
+      box.appendChild(el("b", null, T("errorTitle")));
+      var a = el("a", null, GITHUB_URL);
+      a.href = GITHUB_URL;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      box.appendChild(document.createTextNode(T("errorBody")));
+      box.appendChild(a);
       grid.appendChild(box);
+      return;
+    }
+
+    if (!shown.length) {
+      var box2 = el("div", "empty");
+      if (state.list.length === 0) {
+        box2.appendChild(el("b", null, T("emptyAllTitle")));
+        box2.appendChild(document.createTextNode(T("emptyAllBody")));
+      } else {
+        box2.appendChild(el("b", null, T("emptyTitle")));
+        box2.appendChild(document.createTextNode(fmt(T("emptyBody"), { q: state.q || "—" })));
+      }
+      grid.appendChild(box2);
       return;
     }
     shown.forEach(function (p, i) { grid.appendChild(card(p, i)); });
@@ -1055,11 +923,10 @@ footer a:hover{color:var(--text)}
       b.setAttribute("aria-pressed", b.getAttribute("data-lang") === lang ? "true" : "false");
     });
     renderSync();
-    renderNote();
   }
 
   function renderSync() {
-    syncEl.setAttribute("data-state", state.status === "live" ? "live" : state.status);
+    syncEl.setAttribute("data-state", state.status);
     var n = state.list.length;
     var text;
     if (state.status === "loading") text = T("syncLoading");
@@ -1068,74 +935,12 @@ footer a:hover{color:var(--text)}
     else if (state.status === "offline") text = T("syncOffline");
     else text = T("syncError");
     syncTextEl.textContent = text;
-
     statCountEl.textContent = String(n);
-    if (state.status === "live" || state.status === "cached") {
-      var d = state.stamp ? new Date(state.stamp) : new Date();
-      var hh = String(d.getHours()).padStart(2, "0");
-      var mm = String(d.getMinutes()).padStart(2, "0");
-      statStampEl.textContent = fmt(T("statSynced"), { t: hh + ":" + mm });
-    } else if (state.status === "offline") {
-      statStampEl.textContent = T("statOffline");
-    } else if (state.status === "error") {
-      statStampEl.textContent = T("statError");
-    } else {
-      statStampEl.textContent = T("statSyncing");
-    }
-  }
-
-  function renderNote() {
-    var repo = OWNER + "/" + REPO;
-    var key = state.status === "live" ? "noteLive"
-            : state.status === "cached" ? "noteCached"
-            : "noteOffline";
-    if (state.status === "loading") { noteEl.innerHTML = ""; return; }
-    noteEl.innerHTML = fmt(T(key), { repo: "<code>" + repo + "</code>" });
   }
 
   /* ==========================================================================
-     8. MERGE + LOAD
+     7. MERGE + LOAD
      ========================================================================== */
-  function buildFallbackList() {
-    return FALLBACK_PROJECTS.map(function (p, i) {
-      return {
-        dir: p.dir, name: p.name, desc: p.desc, tags: p.tags || [],
-        kind: p.kind || "game", c1: p.c1, c2: p.c2, order: i,
-        isNew: false, pageTitle: "", pageDesc: ""
-      };
-    });
-  }
-
-  function merge(remoteDirs) {
-    var byDir = {};
-    FALLBACK_PROJECTS.forEach(function (p, i) { byDir[p.dir] = i; });
-    var out = [];
-    var remoteSet = {};
-    remoteDirs.forEach(function (d) { remoteSet[d] = 1; });
-
-    // known projects that still exist upstream keep their metadata and order
-    FALLBACK_PROJECTS.forEach(function (p, i) {
-      if (!remoteSet[p.dir]) return;               // gone from the repo -> dropped
-      out.push({
-        dir: p.dir, name: p.name, desc: p.desc, tags: p.tags || [],
-        kind: p.kind || "game", c1: p.c1, c2: p.c2, order: i,
-        isNew: false, pageTitle: "", pageDesc: ""
-      });
-    });
-
-    // unknown folders become cards with a generated palette
-    var fresh = remoteDirs.filter(function (d) { return !(d in byDir); }).sort();
-    fresh.forEach(function (d, i) {
-      var pal = palette(i);
-      out.push({
-        dir: d, name: null, desc: null, tags: [], kind: "game",
-        c1: pal[0], c2: pal[1], order: 1000 + i, isNew: true,
-        pageTitle: "", pageDesc: ""
-      });
-    });
-    return out;
-  }
-
   var PALETTE = [
     ["#8b5cf6", "#22d3ee"], ["#f472b6", "#8b5cf6"], ["#34d399", "#0ea5e9"],
     ["#fbbf24", "#f97316"], ["#60a5fa", "#a78bfa"], ["#f87171", "#fbbf24"],
@@ -1143,13 +948,23 @@ footer a:hover{color:var(--text)}
   ];
   function palette(i) { return PALETTE[i % PALETTE.length]; }
 
-  /* Take the lang-picked name/desc out of a per-project file and lay it over
-     whatever the built-in list had. Anything the file does not specify keeps
-     its built-in value, so a project.json may describe only what it wants to. */
   function bilingual(value, fallback) {
     if (!value) return fallback || null;
     if (typeof value === "string") return { en: value, zh: value };
     return value;
+  }
+
+  function merge(remoteDirs) {
+    var out = [];
+    remoteDirs.forEach(function (d, i) {
+      var pal = palette(i);
+      out.push({
+        dir: d, name: null, desc: null, tags: [], kind: "game",
+        c1: pal[0], c2: pal[1], order: i, isNew: true,
+        pageTitle: "", pageDesc: "", source: ""
+      });
+    });
+    return out;
   }
 
   function applyMeta(list) {
@@ -1158,7 +973,6 @@ footer a:hover{color:var(--text)}
       p = list[i];
       m = p.meta;
       if (m) {
-        // per-project files win over the built-in values
         if (m.name) p.name = bilingual(m.name, p.name);
         if (m.desc) p.desc = bilingual(m.desc, p.desc);
         if (m.tags && m.tags.length) p.tags = m.tags;
@@ -1167,7 +981,7 @@ footer a:hover{color:var(--text)}
         if (m.c2) p.c2 = m.c2;
         if (m.order != null) p.order = m.order;
         if (m.url) p.url = m.url;
-        if (m.source === "json") p.isNew = false;   // described on purpose: not "undocumented"
+        if (m.source === "json") p.isNew = false;
         p.source = m.source;
         if (m.hidden) p.hidden = true;
         if (m.pageTitle) p.pageTitle = m.pageTitle;
@@ -1175,8 +989,6 @@ footer a:hover{color:var(--text)}
       }
       delete p.meta;
     }
-    // removal and reordering must produce a NEW array: the rendered cards from the
-    // first pass come from a slice of the old one and must not be mutated in place
     list = list.filter(function (x) { return !x.hidden; });
     list.sort(function (a, b) {
       var oa = a.order == null ? 10000 : a.order;
@@ -1187,65 +999,86 @@ footer a:hover{color:var(--text)}
     return list;
   }
 
-  function apply(newList, status, stamp) {
+  function apply(newList, status) {
     if (newList) state.list = newList;
     if (status) state.status = status;
-    state.stamp = stamp || state.stamp;
-    renderFilters();
     renderGrid();
     renderSync();
-    renderNote();
+  }
+
+  /* ------------------------------------------------------------------
+     后台静默刷新：先让用户看到缓存里的完整卡片，
+     同时异步拉取最新的 project.json，拿到后再覆盖一次，无需手动刷新。
+     ------------------------------------------------------------------ */
+  function refreshMeta(cachedList, epoch) {
+    if (!cachedList.length) return;
+    var jobs = cachedList.map(function (p) {
+      return readMeta(p.dir).then(function (meta) { p.meta = meta; });
+    });
+    Promise.all(jobs).then(function () {
+      // 如果用户在刷新期间点了 refresh，跳过这次覆盖
+      if (state.epoch !== epoch) return;
+      var updated = applyMeta(cachedList.slice());
+      writeCache(updated);
+      apply(updated, "cached");
+    }).catch(function () {
+      // 静默失败：继续用缓存里的内容，不打扰用户
+    });
   }
 
   function load(force) {
     state.status = "loading";
+    state.epoch = ++loadEpoch;
     renderSync();
     if (!state.list.length) renderSkeletons();
 
     if (!force) {
       var c = readCache();
       if (c) {
-        apply(merge(c.list), "cached", c.at);
+        // 缓存里已经含完整元数据，直接渲染完整卡片
+        apply(c.list, "cached");
+        // 后台静默刷新，让最新的 project.json 慢慢覆盖上来
+        refreshMeta(c.list, state.epoch);
         return Promise.resolve();
       }
     } else {
       clearCache();
     }
 
+    var myEpoch = state.epoch;
+
     return fetchTree()
       .then(function (files) {
         var dirs = toProjects(files);
         if (!dirs.length) throw new Error("no projects found in tree");
         var list = merge(dirs);
-        // Render straight away from the built-in values, then let each project's
-        // own project.json / README.md / <title> refine its card as they arrive.
-        apply(list.slice(), "live", Date.now());
-        writeCache(dirs);
+        apply(list.slice(), "live");
         var jobs = list.map(function (p) {
           return readMeta(p.dir).then(function (meta) { p.meta = meta; });
         });
         return Promise.all(jobs).then(function () {
-          // applyMeta returns a NEW array (hidden entries dropped, order applied)
-          apply(applyMeta(list));
+          var finalList = applyMeta(list);
+          // 关键：等所有元数据都拿到之后再写缓存，缓存里就带了 name/desc/tags
+          if (state.epoch === myEpoch) {
+            writeCache(finalList);
+            apply(finalList, "live");
+          }
         });
       })
       .catch(function () {
-        var local = buildFallbackList();
-        apply(local, "offline", null);
+        if (state.epoch === myEpoch) apply([], "error");
       });
   }
 
   /* ==========================================================================
-     9. WIRING
+     8. WIRING
      ========================================================================== */
   function init() {
-    grid = $("grid"); filtersEl = $("filters"); qEl = $("q"); syncEl = $("sync");
-    syncTextEl = $("syncText"); noteEl = $("note"); statCountEl = $("statCount");
-    statStampEl = $("statStamp"); statHostEl = $("statHost");
+    grid = $("grid"); qEl = $("q"); syncEl = $("sync");
+    syncTextEl = $("syncText"); statCountEl = $("statCount");
+    statHostEl = $("statHost");
 
     lang = detectLang();
-    // remember the auto-detected choice too, so the page never "re-detects"
-    // and flips back on the next visit
     storeLang(lang);
     $("repoLink").href = GITHUB_URL;
     statHostEl.textContent = T("host");
@@ -1257,7 +1090,6 @@ footer a:hover{color:var(--text)}
         lang = next;
         storeLang(lang);
         renderChrome();
-        renderFilters();
         renderGrid();
       });
     });
@@ -1273,8 +1105,7 @@ footer a:hover{color:var(--text)}
 
     $("resync").addEventListener("click", function (e) {
       e.preventDefault();
-      qEl.value = ""; state.q = ""; state.filter = "all";
-      renderFilters();
+      qEl.value = ""; state.q = "";
       load(true);
     });
 
