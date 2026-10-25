@@ -111,12 +111,110 @@
     return imp;
   }
 
+  /* ------------------------------------------------------------------
+     尾音（效果余响）处理
+     ------------------------------------------------------------------
+     离线渲染默认只渲染原音频那么长，回声 / 混响 / 颤音这类“时间型”
+     效果会在结尾被硬切。这里先按参数算出需要多渲染多久，渲染完再把
+     尾部纯静音裁掉：效果能完整播完，导出文件也不会拖一段空白。
+     ------------------------------------------------------------------ */
+
+  const TAIL_REL    = 0.001;  /* 衰减到整体峰值的 -60 dB 视为听不见 */
+  const TAIL_ABS    = 1e-5;   /* 绝对下限（约 -100 dBFS），防止极安静素材无限延长 */
+  const TAIL_MARGIN = 0.5;    /* 估算时多衰减一档，避免卡在门限上 */
+  const TAIL_PAD    = 0.05;   /* 额外余量（秒） */
+  const TAIL_KEEP   = 0.02;   /* 裁静音时保留的自然收尾（秒） */
+  const TAIL_FADE   = 0.005;  /* 结尾淡出，避免截断产生爆音 */
+  const REVERB_TIME = 1.9;    /* 混响脉冲响应长度（秒） */
+
+  /* 回声反馈量（与效果链中的计算保持一致） */
+  function echoFeedback(p) {
+    return Math.min(0.72, 0.45 * p.echo + 0.1);
+  }
+
+  /* 回声需要重复几次才衰减到听不见（只看相对衰减，与音量无关） */
+  function echoRepeats(p) {
+    const wet = Math.max(0.85 * p.echo, 1e-9);
+    const fb  = echoFeedback(p);
+    if (!(fb > 0) || fb >= 1) return 1;
+
+    /* 第 1 次回声约为 wet·峰值/(1+wet)，目标是比峰值低 60 dB 再多留一档 */
+    const target = TAIL_REL * (1 + wet) * TAIL_MARGIN;
+    const n = 1 + Math.log(target / wet) / Math.log(fb);
+    if (!isFinite(n) || n < 1) return 1;
+    return Math.min(64, Math.ceil(n));
+  }
+
+  /* 需要额外渲染的尾音长度（秒） */
+  function effectTailSeconds(p) {
+    let tail = 0;
+    if (p.echo > 0.005)    tail += (p.echoTime || 0.25) * echoRepeats(p) + TAIL_PAD;
+    if (p.reverb > 0.005)  tail += REVERB_TIME + TAIL_PAD;
+    if (p.vibrato > 0.005) tail += 0.02;
+    return tail;
+  }
+
+  /* 裁掉尾音里听不见的部分，并给结尾加极短淡出。
+     minLen = 原音频长度：原始音频自己的结尾（包括结尾静音）保持不动，
+     只裁“多渲染出来”的那一段。 */
+  function trimTail(buffer, minLen) {
+    const sr    = buffer.sampleRate;
+    const nch   = buffer.numberOfChannels;
+    const chans = [];
+    for (let c = 0; c < nch; c++) chans.push(buffer.getChannelData(c));
+
+    /* 门限跟随整体峰值：比峰值低 60 dB 就当听不见 */
+    let peak = 0;
+    for (let c = 0; c < nch; c++) {
+      const d = chans[c];
+      for (let i = 0; i < d.length; i++) {
+        const a = d[i] < 0 ? -d[i] : d[i];
+        if (a > peak) peak = a;
+      }
+    }
+    if (peak <= 0) return buffer;
+    const floor = Math.max(TAIL_ABS, peak * TAIL_REL);
+
+    /* 从末尾往前找最后一个还能听见的采样点 */
+    let last = -1;
+    for (let i = buffer.length - 1; i >= 0; i--) {
+      let p = 0;
+      for (let c = 0; c < nch; c++) {
+        const a = Math.abs(chans[c][i]);
+        if (a > p) p = a;
+      }
+      if (p > floor) { last = i; break; }
+    }
+    if (last < 0) return buffer;   /* 整段静音，保持原样 */
+
+    const keep = Math.round(sr * TAIL_KEEP);
+    const len  = Math.min(buffer.length, Math.max(minLen, last + 1 + keep));
+    if (len >= buffer.length) return buffer;   /* 没有可裁的尾巴 */
+
+    const out = audioCtx.createBuffer(nch, len, sr);
+
+    /* 只有裁在“新长出来的尾巴”上才需要淡出，别动原音频的结尾 */
+    const fade   = len > minLen
+      ? Math.min(len, Math.max(1, Math.round(sr * TAIL_FADE)))
+      : 0;
+    const fadeAt = len - fade;
+
+    for (let c = 0; c < nch; c++) {
+      const dst = out.getChannelData(c);
+      dst.set(chans[c].subarray(0, len));
+      for (let i = 0; i < fade; i++) dst[fadeAt + i] *= i / fade;
+    }
+    return out;
+  }
+
   async function renderAudio(buffer, p) {
     const sr  = buffer.sampleRate;
     const nch = buffer.numberOfChannels;
     const len = buffer.length;
 
-    const ctx = new OfflineCtxClass(nch, len, sr);
+    /* 多渲染一段尾音，避免回声 / 混响被截断 */
+    const tailLen = Math.round(effectTailSeconds(p) * sr);
+    const ctx = new OfflineCtxClass(nch, len + tailLen, sr);
 
     const src = ctx.createBufferSource();
     src.buffer = buffer;
@@ -227,7 +325,7 @@
       delay.delayTime.value = p.echoTime;
 
       const fb = ctx.createGain();
-      fb.gain.value = Math.min(0.72, 0.45 * p.echo + 0.1);
+      fb.gain.value = echoFeedback(p);
 
       const wet = ctx.createGain();
       wet.gain.value = 0.85 * p.echo;
@@ -250,7 +348,7 @@
     /* ---- 混响 ---- */
     if (p.reverb > 0.005) {
       const conv = ctx.createConvolver();
-      conv.buffer = makeImpulse(ctx, 1.9, 2.6, Math.max(1, Math.min(2, nch)));
+      conv.buffer = makeImpulse(ctx, REVERB_TIME, 2.6, Math.max(1, Math.min(2, nch)));
 
       const wet = ctx.createGain();
       wet.gain.value = 0.75 * p.reverb;
@@ -275,7 +373,10 @@
     g.connect(ctx.destination);
 
     src.start(0);
-    return await ctx.startRendering();
+    const rendered = await ctx.startRendering();
+
+    /* 有尾音时裁掉多余的静音，效果已经完整播完 */
+    return tailLen > 0 ? trimTail(rendered, len) : rendered;
   }
 
   /* ==================================================================
